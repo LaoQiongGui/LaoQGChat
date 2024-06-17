@@ -25,7 +25,7 @@ type chatService struct {
 }
 
 func NewChatService() ChatService {
-	service := &chatService{}
+	service := new(chatService)
 	service.ChatContextMap = make(map[uuid.UUID]dto.ChatContext)
 	service.azureOpenAIKey = os.Getenv("AOAI_API_KEY")
 	service.modelDeploymentID = os.Getenv("AOAI_CHAT_COMPLETIONS_MODEL")
@@ -34,13 +34,13 @@ func NewChatService() ChatService {
 }
 
 func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
-	outDto := dto.ChatOutDto{}
+	outDto := new(dto.ChatOutDto)
 
 	keyCredential := azcore.NewKeyCredential(service.azureOpenAIKey)
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0001"
+		ctx.Keys["MessageCode"] = "ECH01"
 		ctx.Keys["MessageText"] = "Azure OpenAI认证失败，请联系管理员。"
 		panic(err)
 	}
@@ -54,13 +54,13 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 	}, nil)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0002"
+		ctx.Keys["MessageCode"] = "ECH02"
 		ctx.Keys["MessageText"] = "Azure OpenAI获取答案失败，请联系管理员。"
 		panic(err)
 	}
 	if resp.Choices == nil || len(resp.Choices) == 0 {
 		ctx.Keys["StatusCode"] = 100
-		ctx.Keys["MessageCode"] = "W0001"
+		ctx.Keys["MessageCode"] = "WCH01"
 		ctx.Keys["MessageText"] = "无法回答该问题。"
 		panic(nil)
 	}
@@ -84,15 +84,15 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 	outDto.SessionId = sessionId
 	outDto.Answer = answer
 	outDto.Choices = choices
-	return &outDto
+	return outDto
 }
 
 func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
-	outDto := dto.ChatOutDto{}
+	outDto := new(dto.ChatOutDto)
 	chatContext, ok := service.ChatContextMap[inDto.SessionId]
 	if !ok {
 		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0003"
+		ctx.Keys["MessageCode"] = "ECH03"
 		ctx.Keys["MessageText"] = "不存在该会话或该会话已被删除。"
 		panic(nil)
 	}
@@ -101,7 +101,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0001"
+		ctx.Keys["MessageCode"] = "ECH01"
 		ctx.Keys["MessageText"] = "Azure OpenAI认证失败，请联系管理员。"
 		panic(err)
 	}
@@ -115,13 +115,13 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 	}, nil)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0002"
+		ctx.Keys["MessageCode"] = "ECH02"
 		ctx.Keys["MessageText"] = "Azure OpenAI获取答案失败，请联系管理员。"
 		panic(err)
 	}
 	if resp.Choices == nil || len(resp.Choices) == 0 {
 		ctx.Keys["StatusCode"] = 100
-		ctx.Keys["MessageCode"] = "W0001"
+		ctx.Keys["MessageCode"] = "WCH01"
 		ctx.Keys["MessageText"] = "无法回答该问题。"
 		panic(nil)
 	}
@@ -142,14 +142,14 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 	outDto.SessionId = inDto.SessionId
 	outDto.Answer = answer
 	outDto.Choices = choices
-	return &outDto
+	return outDto
 }
 
 func (service *chatService) EndChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
 	_, ok := service.ChatContextMap[inDto.SessionId]
 	if !ok {
 		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0003"
+		ctx.Keys["MessageCode"] = "ECH03"
 		ctx.Keys["MessageText"] = "不存在该会话或该会话已被删除。"
 		panic(nil)
 	}

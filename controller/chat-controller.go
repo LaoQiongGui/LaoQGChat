@@ -24,18 +24,36 @@ func NewChatController(chatService service.ChatService) ChatController {
 
 func (c chatController) StartChat(ctx *gin.Context) *dto.ChatOutDto {
 	var inDto dto.ChatInDto
-	ctx.Bind(&inDto)
+	err := ctx.Bind(&inDto)
+	if err != nil {
+		ctx.Keys["StatusCode"] = 200
+		ctx.Keys["MessageCode"] = "E0000"
+		ctx.Keys["MessageText"] = "请求体格式错误。"
+		panic(err)
+	}
 	return c.service.StartChat(ctx, inDto)
 }
 
 func (c chatController) Chat(ctx *gin.Context) *dto.ChatOutDto {
 	var inDto dto.ChatInDto
-	ctx.Bind(&inDto)
+	err := ctx.Bind(&inDto)
+	if err != nil {
+		ctx.Keys["StatusCode"] = 200
+		ctx.Keys["MessageCode"] = "E0000"
+		ctx.Keys["MessageText"] = "请求体格式错误。"
+		panic(err)
+	}
 	return c.service.Chat(ctx, inDto)
 }
 
 func (c chatController) EndChat(ctx *gin.Context) *dto.ChatOutDto {
 	var inDto dto.ChatInDto
-	ctx.Bind(&inDto)
+	err := ctx.Bind(&inDto)
+	if err != nil {
+		ctx.Keys["StatusCode"] = 200
+		ctx.Keys["MessageCode"] = "E0000"
+		ctx.Keys["MessageText"] = "请求体格式错误。"
+		panic(err)
+	}
 	return c.service.EndChat(ctx, inDto)
 }
