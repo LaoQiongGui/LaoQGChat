@@ -8,12 +8,17 @@ import (
 )
 
 var (
+	authService    = service.NewAuthService()
+	authController = controller.NewAuthController(authService)
+
 	chatService    = service.NewChatService()
 	chatController = controller.NewChatController(chatService)
 )
 
 func main() {
 	server := gin.Default()
+
+	server.POST("/Auth/Login", handler.HandlerBuilder(authController.Login))
 
 	server.POST("/Chat/StartChat", handler.HandlerBuilder(chatController.StartChat))
 
