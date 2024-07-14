@@ -4,17 +4,12 @@ import (
 	"LaoQGChat/controller"
 	"LaoQGChat/handler"
 	"LaoQGChat/service"
+	"database/sql"
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 	"time"
-)
-
-var (
-	authService    = service.NewAuthService()
-	authController = controller.NewAuthController(authService)
-
-	chatService    = service.NewChatService()
-	chatController = controller.NewChatController(chatService)
 )
 
 func main() {
@@ -29,6 +24,28 @@ func main() {
 		AllowCredentials: true,                                     // 允许携带凭证
 		MaxAge:           12 * time.Hour,                           // 预检请求缓存时间
 	}
+
+	// 初始化db
+	connStr := "host=localhost port=5432 user=laoqionggui password=LaoQi0ng@ui sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		fmt.Println("DB连接失败")
+		return
+	}
+
+	// 初始化service
+	var (
+		authService    = service.NewAuthService(db)
+		authController = controller.NewAuthController(authService)
+
+		chatService    = service.NewChatService(db)
+		chatController = controller.NewChatController(chatService)
+	)
+	if authService == nil || authController == nil || chatService == nil || chatController == nil {
+		fmt.Println("初始化service失败")
+		return
+	}
+
 	server.Use(cors.New(config))
 
 	server.POST("/Auth/Login", handler.HandlerBuilder(authController.Login))
@@ -39,5 +56,9 @@ func main() {
 
 	server.POST("/Chat/EndChat", handler.HandlerBuilder(chatController.EndChat))
 
-	server.Run(":12195")
+	err = server.Run(":12195")
+	if err != nil {
+		fmt.Println("启动服务失败")
+		return
+	}
 }

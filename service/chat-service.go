@@ -3,6 +3,7 @@ package service
 import (
 	"LaoQGChat/dto"
 	"context"
+	"database/sql"
 	"github.com/Azure/azure-sdk-for-go/sdk/ai/azopenai"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -24,7 +25,7 @@ type chatService struct {
 	azureOpenAIEndpoint string
 }
 
-func NewChatService() ChatService {
+func NewChatService(db *sql.DB) ChatService {
 	service := new(chatService)
 	service.ChatContextMap = make(map[uuid.UUID]dto.ChatContext)
 	service.azureOpenAIKey = os.Getenv("AOAI_API_KEY")

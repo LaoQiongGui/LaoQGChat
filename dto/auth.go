@@ -8,5 +8,5 @@ type AuthInDto struct {
 }
 
 type AuthOutDto struct {
-	AuthToken uuid.UUID `json:"auth_token"`
+	LoginToken uuid.UUID `json:"login_token"`
 }
