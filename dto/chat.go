@@ -6,8 +6,9 @@ import (
 )
 
 type ChatInDto struct {
-	SessionId uuid.UUID `json:"sessionId"`
-	Question  string    `json:"question"`
+	Permission string    `json:"permission"`
+	SessionId  uuid.UUID `json:"sessionId"`
+	Question   string    `json:"question"`
 }
 
 type ChatOutDto struct {

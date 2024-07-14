@@ -11,11 +11,11 @@ import (
 
 type AuthService interface {
 	Login(ctx *gin.Context, inDto dto.AuthInDto) *dto.AuthOutDto
-	Check(ctx *gin.Context, tokenId uuid.UUID)
+	Check(ctx *gin.Context, permissionCheck func(permission string))
 }
 
 type authService struct {
-	selectUserInfo        *sql.Stmt
+	getUserInfo           *sql.Stmt
 	updateLoginStatus     *sql.Stmt
 	getLoginStatusByToken *sql.Stmt
 }
@@ -23,12 +23,12 @@ type authService struct {
 func NewAuthService(db *sql.DB) AuthService {
 	var (
 		err                   error
-		selectUserInfo        *sql.Stmt
+		getUserInfo           *sql.Stmt
 		updateLoginStatus     *sql.Stmt
 		getLoginStatusByToken *sql.Stmt
 	)
-	selectUserInfo, err = db.Prepare(
-		"SELECT permission FROM account WHERE user_name = $1 AND password = $2")
+	getUserInfo, err = db.Prepare(
+		"SELECT password, permission FROM account WHERE user_name = $1")
 	if err != nil {
 		return nil
 	}
@@ -47,7 +47,7 @@ func NewAuthService(db *sql.DB) AuthService {
 		return nil
 	}
 	service := &authService{
-		selectUserInfo:        selectUserInfo,
+		getUserInfo:           getUserInfo,
 		updateLoginStatus:     updateLoginStatus,
 		getLoginStatusByToken: getLoginStatusByToken,
 	}
@@ -57,12 +57,13 @@ func NewAuthService(db *sql.DB) AuthService {
 func (service *authService) Login(ctx *gin.Context, inDto dto.AuthInDto) *dto.AuthOutDto {
 	var (
 		err         error
+		password    string
 		permission  string
-		currentTime time.Time = time.Now()
-		loginToken  uuid.UUID = uuid.New()
+		currentTime = time.Now()
+		loginToken  = uuid.New()
 	)
-	err = service.selectUserInfo.QueryRow(inDto.Username, inDto.Password).Scan(&permission)
-	if err != nil {
+	err = service.getUserInfo.QueryRow(inDto.Username).Scan(&password, &permission)
+	if err != nil || password != inDto.Password {
 		ctx.Keys["StatusCode"] = 200
 		ctx.Keys["MessageCode"] = "EAU00"
 		ctx.Keys["MessageText"] = "账号或密码错误。"
@@ -78,13 +79,25 @@ func (service *authService) Login(ctx *gin.Context, inDto dto.AuthInDto) *dto.Au
 	return outDto
 }
 
-func (service *authService) Check(ctx *gin.Context, loginToken uuid.UUID) {
+func (service *authService) Check(ctx *gin.Context, permissionCheck func(permission string)) {
 	var (
 		err           error
+		loginToken    uuid.UUID
 		userName      string
-		currentTime   time.Time = time.Now()
+		password      string
+		permission    string
+		currentTime   = time.Now()
 		lastLoginTime time.Time
 	)
+	// 从http头中取得loginToken
+	loginToken, err = uuid.Parse(ctx.GetHeader("LoginToken"))
+	if err != nil {
+		ctx.Keys["StatusCode"] = 200
+		ctx.Keys["MessageCode"] = "EAU01"
+		ctx.Keys["MessageText"] = "用户未登录。"
+		panic(err)
+	}
+	// 用户存在check
 	err = service.getLoginStatusByToken.QueryRow(loginToken).Scan(&userName, &lastLoginTime)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
@@ -98,4 +111,17 @@ func (service *authService) Check(ctx *gin.Context, loginToken uuid.UUID) {
 		ctx.Keys["MessageText"] = "登录已超时，请重新登录。"
 		panic(err)
 	}
+	err = service.getUserInfo.QueryRow(userName).Scan(&password, &permission)
+	if err != nil {
+		ctx.Keys["StatusCode"] = 200
+		ctx.Keys["MessageCode"] = "EAU03"
+		ctx.Keys["MessageText"] = "用户已注销。"
+		panic(err)
+	}
+	// 不需要权限check直接返回
+	if permissionCheck == nil {
+		return
+	}
+	// 权限check
+	permissionCheck(permission)
 }

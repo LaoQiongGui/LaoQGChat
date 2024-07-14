@@ -19,18 +19,19 @@ type ChatService interface {
 }
 
 type chatService struct {
-	ChatContextMap      map[uuid.UUID]dto.ChatContext
+	chatContextMap      map[uuid.UUID]dto.ChatContext
 	azureOpenAIKey      string
 	modelDeploymentID   string
 	azureOpenAIEndpoint string
 }
 
 func NewChatService(db *sql.DB) ChatService {
-	service := new(chatService)
-	service.ChatContextMap = make(map[uuid.UUID]dto.ChatContext)
-	service.azureOpenAIKey = os.Getenv("AOAI_API_KEY")
-	service.modelDeploymentID = os.Getenv("AOAI_CHAT_COMPLETIONS_MODEL")
-	service.azureOpenAIEndpoint = os.Getenv("AOAI_ENDPOINT")
+	service := &chatService{
+		chatContextMap:      make(map[uuid.UUID]dto.ChatContext),
+		azureOpenAIKey:      os.Getenv("AOAI_API_KEY"),
+		modelDeploymentID:   os.Getenv("AOAI_CHAT_COMPLETIONS_MODEL"),
+		azureOpenAIEndpoint: os.Getenv("AOAI_ENDPOINT"),
+	}
 	return service
 }
 
@@ -80,7 +81,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 			Content: to.Ptr(answer),
 		}),
 	}
-	service.ChatContextMap[sessionId] = chatContext
+	service.chatContextMap[sessionId] = chatContext
 
 	outDto.SessionId = sessionId
 	outDto.Answer = answer
@@ -90,7 +91,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 
 func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
 	outDto := new(dto.ChatOutDto)
-	chatContext, ok := service.ChatContextMap[inDto.SessionId]
+	chatContext, ok := service.chatContextMap[inDto.SessionId]
 	if !ok {
 		ctx.Keys["StatusCode"] = 200
 		ctx.Keys["MessageCode"] = "ECH03"
@@ -138,7 +139,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 		messages, &azopenai.ChatRequestAssistantMessage{
 			Content: to.Ptr(answer),
 		})
-	service.ChatContextMap[inDto.SessionId] = chatContext
+	service.chatContextMap[inDto.SessionId] = chatContext
 
 	outDto.SessionId = inDto.SessionId
 	outDto.Answer = answer
@@ -147,13 +148,13 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 }
 
 func (service *chatService) EndChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
-	_, ok := service.ChatContextMap[inDto.SessionId]
+	_, ok := service.chatContextMap[inDto.SessionId]
 	if !ok {
 		ctx.Keys["StatusCode"] = 200
 		ctx.Keys["MessageCode"] = "ECH03"
 		ctx.Keys["MessageText"] = "不存在该会话或该会话已被删除。"
 		panic(nil)
 	}
-	delete(service.ChatContextMap, inDto.SessionId)
+	delete(service.chatContextMap, inDto.SessionId)
 	return nil
 }

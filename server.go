@@ -17,12 +17,12 @@ func main() {
 
 	// 配置CORS中间件
 	config := cors.Config{
-		AllowAllOrigins:  true,                                     // 允许所有的域名
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"}, // 允许的HTTP方法
-		AllowHeaders:     []string{"Origin", "Content-Type"},       // 允许的请求头
-		ExposeHeaders:    []string{"Content-Length"},               // 暴露的头信息
-		AllowCredentials: true,                                     // 允许携带凭证
-		MaxAge:           12 * time.Hour,                           // 预检请求缓存时间
+		AllowAllOrigins:  true,                               // 允许所有的域名
+		AllowMethods:     []string{"GET", "POST"},            // 允许的HTTP方法
+		AllowHeaders:     []string{"Origin", "Content-Type"}, // 允许的请求头
+		ExposeHeaders:    []string{"Content-Length"},         // 暴露的头信息
+		AllowCredentials: true,                               // 允许携带凭证
+		MaxAge:           12 * time.Hour,                     // 预检请求缓存时间
 	}
 
 	// 初始化db
@@ -33,16 +33,23 @@ func main() {
 		return
 	}
 
-	// 初始化service
+	// 初始化认证service
 	var (
 		authService    = service.NewAuthService(db)
 		authController = controller.NewAuthController(authService)
-
-		chatService    = service.NewChatService(db)
-		chatController = controller.NewChatController(chatService)
 	)
-	if authService == nil || authController == nil || chatService == nil || chatController == nil {
-		fmt.Println("初始化service失败")
+	if authService == nil || authController == nil {
+		fmt.Println("初始化认证service失败")
+		return
+	}
+
+	// 初始化业务service
+	var (
+		chatService    = service.NewChatService(db)
+		chatController = controller.NewChatController(authService, chatService)
+	)
+	if chatService == nil || chatController == nil {
+		fmt.Println("初始化业务service失败")
 		return
 	}
 

@@ -13,12 +13,14 @@ type ChatController interface {
 }
 
 type chatController struct {
-	service service.ChatService
+	authService service.AuthService
+	service     service.ChatService
 }
 
-func NewChatController(chatService service.ChatService) ChatController {
+func NewChatController(authService service.AuthService, chatService service.ChatService) ChatController {
 	return chatController{
-		service: chatService,
+		authService: authService,
+		service:     chatService,
 	}
 }
 
@@ -31,6 +33,10 @@ func (c chatController) StartChat(ctx *gin.Context) *dto.ChatOutDto {
 		ctx.Keys["MessageText"] = "请求体格式错误。"
 		panic(err)
 	}
+	// 认证check
+	c.authService.Check(ctx, func(permission string) {
+		inDto.Permission = permission
+	})
 	return c.service.StartChat(ctx, inDto)
 }
 
@@ -43,6 +49,10 @@ func (c chatController) Chat(ctx *gin.Context) *dto.ChatOutDto {
 		ctx.Keys["MessageText"] = "请求体格式错误。"
 		panic(err)
 	}
+	// 认证check
+	c.authService.Check(ctx, func(permission string) {
+		inDto.Permission = permission
+	})
 	return c.service.Chat(ctx, inDto)
 }
 
@@ -55,5 +65,9 @@ func (c chatController) EndChat(ctx *gin.Context) *dto.ChatOutDto {
 		ctx.Keys["MessageText"] = "请求体格式错误。"
 		panic(err)
 	}
+	// 认证check
+	c.authService.Check(ctx, func(permission string) {
+		inDto.Permission = permission
+	})
 	return c.service.EndChat(ctx, inDto)
 }
