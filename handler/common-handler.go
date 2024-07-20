@@ -2,34 +2,58 @@ package handler
 
 import (
 	"LaoQGChat/dto"
+	"LaoQGChat/myerror"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
 )
 
-func HandlerBuilder[T any](handlerFunc func(c *gin.Context) *T) gin.HandlerFunc {
+func CommonErrorHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		ctx.Keys = make(map[string]any)
-		ctx.Keys["StatusCode"] = 0
-		ctx.Keys["MessageCode"] = "N0000"
-		ctx.Keys["MessageText"] = ""
-		restOutDto := dto.RestOutDto{}
-		defer errorHandler(ctx, &restOutDto)
+		// 前处理
+		defer errorHandler(ctx)
 
-		if pData := handlerFunc(ctx); pData != nil {
-			restOutDto.Data = *pData
-		}
+		// 下一层
+		ctx.Next()
+
+		// 后处理
 	}
 }
 
-func errorHandler(ctx *gin.Context, pRestOutDto *dto.RestOutDto) {
-	if err := recover(); err != nil && ctx.GetInt("StatusCode") == 0 {
-		pRestOutDto.Common.Status = 990
-		pRestOutDto.Common.MessageCode = "E9999"
-		pRestOutDto.Common.MessageText = "System Error"
+func errorHandler(ctx *gin.Context) {
+	restOutDto := dto.RestOutDto{}
+
+	// 填充响应体Common部
+	if err := recover(); err != nil {
+		switch myError := err.(type) {
+		case *myerror.CustomError:
+			restOutDto.Common = dto.RestCommonDto{
+				Status:      myError.StatusCode,
+				MessageCode: myError.MessageCode,
+				MessageText: myError.MessageText,
+			}
+		default:
+			restOutDto.Common = dto.RestCommonDto{
+				Status:      990,
+				MessageCode: "E9999",
+				MessageText: "System Error",
+			}
+		}
 	} else {
-		pRestOutDto.Common.Status = ctx.GetInt("StatusCode")
-		pRestOutDto.Common.MessageCode = ctx.GetString("MessageCode")
-		pRestOutDto.Common.MessageText = ctx.GetString("MessageText")
+		restOutDto.Common = dto.RestCommonDto{
+			Status:      0,
+			MessageCode: "N0000",
+			MessageText: "",
+		}
 	}
-	ctx.Render(200, render.JSON{Data: *pRestOutDto})
+
+	// 填充响应体Data部
+	if data, exists := ctx.Get("ResponseData"); exists {
+		restOutDto.Data = data
+	} else {
+		restOutDto.Data = nil
+	}
+
+	// 设置响应
+	ctx.Render(200, render.JSON{Data: restOutDto})
 }

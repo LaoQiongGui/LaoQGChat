@@ -1,0 +1,18 @@
+-- Table: public.chat_record
+
+-- DROP TABLE IF EXISTS public.chat_record;
+
+CREATE TABLE IF NOT EXISTS public.chat_record
+(
+    user_name text COLLATE pg_catalog."default" NOT NULL,
+    session_id uuid NOT NULL,
+    context text COLLATE pg_catalog."default",
+    create_timestamp timestamp without time zone,
+    update_timestamp timestamp without time zone,
+    CONSTRAINT chat_record_pkey PRIMARY KEY (session_id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.chat_record
+    OWNER to laoqionggui;

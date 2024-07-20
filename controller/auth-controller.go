@@ -3,11 +3,12 @@ package controller
 import (
 	"LaoQGChat/dto"
 	"LaoQGChat/service"
+
 	"github.com/gin-gonic/gin"
 )
 
 type AuthController interface {
-	Login(ctx *gin.Context) *dto.AuthOutDto
+	Login(ctx *gin.Context)
 }
 
 type authController struct {
@@ -20,8 +21,8 @@ func NewAuthController(service service.AuthService) AuthController {
 	return controller
 }
 
-func (c *authController) Login(ctx *gin.Context) *dto.AuthOutDto {
-	inDto := dto.AuthInDto{}
+func (c *authController) Login(ctx *gin.Context) {
+	inDto := dto.AuthDto{}
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
@@ -29,5 +30,6 @@ func (c *authController) Login(ctx *gin.Context) *dto.AuthOutDto {
 		ctx.Keys["MessageText"] = "请求体格式错误。"
 		panic(err)
 	}
-	return c.service.Login(ctx, inDto)
+	outDto := c.service.Login(ctx, inDto)
+	ctx.Set("ResponseData", outDto)
 }
