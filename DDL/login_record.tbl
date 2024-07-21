@@ -1,0 +1,16 @@
+-- Table: public.login_record
+
+-- DROP TABLE IF EXISTS public.login_record;
+
+CREATE TABLE IF NOT EXISTS public.login_record
+(
+    user_name text COLLATE pg_catalog."default" NOT NULL,
+    last_login_time timestamp without time zone NOT NULL,
+    login_token uuid NOT NULL,
+    CONSTRAINT login_record_pkey PRIMARY KEY (user_name)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.login_record
+    OWNER to laoqionggui;

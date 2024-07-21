@@ -1,0 +1,17 @@
+-- Table: public.account
+
+-- DROP TABLE IF EXISTS public.account;
+
+CREATE TABLE IF NOT EXISTS public.account
+(
+    user_name text COLLATE pg_catalog."default" NOT NULL,
+    password text COLLATE pg_catalog."default" NOT NULL,
+    permission text COLLATE pg_catalog."default" NOT NULL DEFAULT 'normal'::text,
+    CONSTRAINT account_pk PRIMARY KEY (user_name),
+    CONSTRAINT permission_check CHECK (permission = ANY (ARRAY['normal'::text, 'vip1'::text, 'vip2'::text, 'vip3'::text, 'vip4'::text, 'vip5'::text, 'super'::text]))
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.account
+    OWNER to laoqionggui;
