@@ -47,10 +47,14 @@ func main() {
 		return
 	}
 
+	// 配置版本检测中间件
+	server.Use(handler.VersionHandler("1.2.0"))
+
 	// 配置认证中间件
 	server.Use(handler.AuthHandler(authService.Check))
 
 	// 配置DB事务中间件
+	server.Use(handler.TransactionHandler(db))
 
 	// 初始化业务service
 	var (
@@ -86,5 +90,11 @@ func initDB() (*sql.DB, error) {
 	if err = db.Ping(); err != nil {
 		return nil, err
 	}
+
+	// 设置连接池
+	db.SetMaxOpenConns(25)   // 最大打开连接数
+	db.SetMaxIdleConns(25)   // 最大闲置连接数
+	db.SetConnMaxLifetime(0) // 连接的最大存活时间
+
 	return db, nil
 }
