@@ -122,6 +122,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 		outDto         = new(dto.ChatOutDto)
 	)
 
+	// azopenai认证
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
 		err = &myerror.CustomError{
@@ -132,9 +133,13 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 		panic(err)
 	}
 
+	// 将inDto转为azopenai的输入
+	chatRequestUserMessage := inDto.ToAzopenai()
 	messages := []azopenai.ChatRequestMessageClassification{
-		&azopenai.ChatRequestUserMessage{Content: azopenai.NewChatRequestUserMessageContent(inDto.Question)},
+		&chatRequestUserMessage,
 	}
+
+	// 发送azopenai请求
 	resp, err := client.GetChatCompletions(context.TODO(), azopenai.ChatCompletionsOptions{
 		Messages:       messages,
 		DeploymentName: &service.modelDeploymentID,
@@ -156,6 +161,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 		panic(err)
 	}
 
+	// 设置回答
 	answer := *resp.Choices[0].Message.Content
 	var choices = make([]string, 0)
 	if len(resp.Choices) > 1 {
@@ -164,6 +170,9 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 		}
 	}
 
+	// TODO：设置选项
+
+	//
 	chatContext = dto.ChatContext{
 		ChatMessages: append(messages, &azopenai.ChatRequestAssistantMessage{
 			Content: to.Ptr(answer),
@@ -250,6 +259,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 		panic(err)
 	}
 
+	// azopenai认证
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
 		err = &myerror.CustomError{
@@ -260,9 +270,14 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 		panic(err)
 	}
 
-	messages := append(chatContext.ChatMessages, &azopenai.ChatRequestUserMessage{
-		Content: azopenai.NewChatRequestUserMessageContent(inDto.Question),
-	})
+	// 将inDto转为azopenai的输入
+	chatRequestUserMessage := inDto.ToAzopenai()
+	messages := []azopenai.ChatRequestMessageClassification{
+		&chatRequestUserMessage,
+	}
+
+	// 将转换后的inDto拼接在原回答之后
+	messages = append(chatContext.ChatMessages, messages...)
 	resp, err := client.GetChatCompletions(context.TODO(), azopenai.ChatCompletionsOptions{
 		Messages:       messages,
 		DeploymentName: &service.modelDeploymentID,

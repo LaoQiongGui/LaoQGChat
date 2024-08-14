@@ -8,8 +8,137 @@ import (
 )
 
 type ChatInDto struct {
-	SessionId uuid.UUID `json:"sessionId"`
-	Question  string    `json:"question"`
+	SessionId uuid.UUID                     `json:"sessionId"`
+	Contents  []ChatQuestionContentPartsDto `json:"contents"`
+}
+
+func (chatInDto *ChatInDto) UnmarshalJSON(data []byte) error {
+	var (
+		err         error
+		typeContent ChatQuestionContentPartsDtoType
+	)
+
+	chatTypeInDto := struct {
+		SessionId uuid.UUID         `json:"sessionId"`
+		Contents  []json.RawMessage `json:"contents"`
+	}{}
+	if err = json.Unmarshal(data, &chatTypeInDto); err != nil {
+		return err
+	}
+	chatInDto.SessionId = chatTypeInDto.SessionId
+	for _, content := range chatTypeInDto.Contents {
+		if err = json.Unmarshal(content, &typeContent); err != nil {
+			return err
+		}
+		switch typeContent.Type {
+		case "Text":
+			var textContent ChatQuestionContentPartsDtoText
+			_ = json.Unmarshal(content, &textContent)
+			chatInDto.Contents = append(chatInDto.Contents, &textContent)
+		case "Image":
+			var imageContent ChatQuestionContentPartsDtoImage
+			_ = json.Unmarshal(content, &imageContent)
+			chatInDto.Contents = append(chatInDto.Contents, &imageContent)
+		case "Audio":
+			var audioContent ChatQuestionContentPartsDtoAudio
+			_ = json.Unmarshal(content, &audioContent)
+			chatInDto.Contents = append(chatInDto.Contents, &audioContent)
+		case "ImageOCR":
+			var imageContent ChatQuestionContentPartsDtoImageOCR
+			_ = json.Unmarshal(content, &imageContent)
+			chatInDto.Contents = append(chatInDto.Contents, &imageContent)
+		}
+	}
+	return nil
+}
+
+func (chatInDto *ChatInDto) ToAzopenai() azopenai.ChatRequestUserMessage {
+	var azopenaiContents []azopenai.ChatCompletionRequestMessageContentPartClassification
+	for _, content := range chatInDto.Contents {
+		azopenaiContent, _ := content.ToChatCompletionRequestMessageContentPartClassification()
+		azopenaiContents = append(azopenaiContents, azopenaiContent)
+	}
+	chatRequestUserMessage := azopenai.ChatRequestUserMessage{Content: azopenai.NewChatRequestUserMessageContent(azopenaiContents)}
+	return chatRequestUserMessage
+}
+
+type ChatQuestionContentPartsDto interface {
+	GetContentType() string
+	ToChatCompletionRequestMessageContentPartClassification() (azopenai.ChatCompletionRequestMessageContentPartClassification, error)
+}
+
+type ChatQuestionContentPartsDtoType struct {
+	Type string `json:"type"`
+}
+
+func (chatQuestionContentPartsDtoType *ChatQuestionContentPartsDtoType) GetContentType() string {
+	return chatQuestionContentPartsDtoType.Type
+}
+
+func (chatQuestionContentPartsDtoType *ChatQuestionContentPartsDtoType) ToChatCompletionRequestMessageContentPartClassification() (azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
+	return nil, nil
+}
+
+type ChatQuestionContentPartsDtoText struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+func (chatQuestionContentPartsDtoText *ChatQuestionContentPartsDtoText) GetContentType() string {
+	return chatQuestionContentPartsDtoText.Type
+}
+
+func (chatQuestionContentPartsDtoText *ChatQuestionContentPartsDtoText) ToChatCompletionRequestMessageContentPartClassification() (azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
+	return &azopenai.ChatCompletionRequestMessageContentPartText{
+		Text: &chatQuestionContentPartsDtoText.Text,
+	}, nil
+}
+
+type ChatQuestionContentPartsDtoImage struct {
+	Type     string `json:"type"`
+	ImageUrl string `json:"imageUrl"`
+}
+
+func (chatQuestionContentPartsDtoImage *ChatQuestionContentPartsDtoImage) GetContentType() string {
+	return chatQuestionContentPartsDtoImage.Type
+}
+
+func (chatQuestionContentPartsDtoImage *ChatQuestionContentPartsDtoImage) ToChatCompletionRequestMessageContentPartClassification() (azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
+	return &azopenai.ChatCompletionRequestMessageContentPartImage{
+		ImageURL: &azopenai.ChatCompletionRequestMessageContentPartImageURL{
+			URL: &chatQuestionContentPartsDtoImage.ImageUrl,
+		},
+	}, nil
+}
+
+type ChatQuestionContentPartsDtoAudio struct {
+	Type string `json:"type"`
+	Data string `json:"imageUrl"`
+}
+
+func (chatQuestionContentPartsDtoAudio *ChatQuestionContentPartsDtoAudio) GetContentType() string {
+	return chatQuestionContentPartsDtoAudio.Type
+}
+
+func (chatQuestionContentPartsDtoAudio *ChatQuestionContentPartsDtoAudio) ToChatCompletionRequestMessageContentPartClassification() (azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
+	return &azopenai.ChatCompletionRequestMessageContentPartText{
+		Text: &chatQuestionContentPartsDtoAudio.Data,
+	}, nil
+}
+
+type ChatQuestionContentPartsDtoImageOCR struct {
+	Type     string `json:"type"`
+	ImageUrl string `json:"imageUrl"`
+}
+
+func (chatQuestionContentPartsDtoImageOCR *ChatQuestionContentPartsDtoImageOCR) GetContentType() string {
+	return chatQuestionContentPartsDtoImageOCR.Type
+}
+
+func (chatQuestionContentPartsDtoImageOCR *ChatQuestionContentPartsDtoImageOCR) ToChatCompletionRequestMessageContentPartClassification() (azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
+	return &azopenai.ChatCompletionRequestMessageContentPartText{
+		Text: &chatQuestionContentPartsDtoImageOCR.ImageUrl,
+	}, nil
 }
 
 type ChatOutDto struct {
