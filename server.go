@@ -51,6 +51,7 @@ func main() {
 	server.Use(handler.AuthHandler(authService.Check))
 
 	// 配置DB事务中间件
+	server.Use(handler.TransactionHandler(db))
 
 	// 初始化业务service
 	var (
