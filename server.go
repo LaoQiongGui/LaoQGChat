@@ -47,11 +47,11 @@ func main() {
 		return
 	}
 
-	// 配置认证中间件
-	server.Use(handler.AuthHandler(authService.Check))
-
 	// 配置DB事务中间件
 	server.Use(handler.TransactionHandler(db))
+
+	// 配置认证中间件
+	server.Use(handler.AuthHandler(authService.Check))
 
 	// 初始化业务service
 	var (
