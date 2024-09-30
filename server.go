@@ -92,9 +92,9 @@ func initDB() (*sql.DB, error) {
 	}
 
 	// 设置连接池
-	db.SetMaxOpenConns(25)   // 最大打开连接数
-	db.SetMaxIdleConns(25)   // 最大闲置连接数
-	db.SetConnMaxLifetime(0) // 连接的最大存活时间
+	db.SetMaxOpenConns(10)                  // 最大打开连接数
+	db.SetMaxIdleConns(10)                  // 最大闲置连接数
+	db.SetConnMaxLifetime(time.Minute * 10) // 连接的最大存活时间
 
 	return db, nil
 }
