@@ -26,7 +26,7 @@ func main() {
 	// 配置CORS中间件
 	config := cors.Config{
 		AllowAllOrigins:  true,                               // 允许所有的域名
-		AllowMethods:     []string{"GET", "POST"},            // 允许的HTTP方法
+		AllowMethods:     []string{"POST"},                   // 允许的HTTP方法
 		AllowHeaders:     []string{"Origin", "Content-Type"}, // 允许的请求头
 		ExposeHeaders:    []string{"Content-Length"},         // 暴露的头信息
 		AllowCredentials: true,                               // 允许携带凭证
@@ -92,9 +92,9 @@ func initDB() (*sql.DB, error) {
 	}
 
 	// 设置连接池
-	db.SetMaxOpenConns(10)                  // 最大打开连接数
-	db.SetMaxIdleConns(10)                  // 最大闲置连接数
-	db.SetConnMaxLifetime(time.Minute * 10) // 连接的最大存活时间
+	db.SetMaxOpenConns(10)   // 最大打开连接数
+	db.SetMaxIdleConns(10)   // 最大闲置连接数
+	db.SetConnMaxLifetime(0) // 连接的最大存活时间
 
 	return db, nil
 }
