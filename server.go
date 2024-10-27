@@ -1,9 +1,9 @@
 package main
 
 import (
-	"LaoQGChat/controller"
-	"LaoQGChat/handler"
-	"LaoQGChat/service"
+	"LaoQGChat/api/controllers"
+	"LaoQGChat/api/middlewares"
+	"LaoQGChat/api/services"
 	"database/sql"
 	"fmt"
 	"time"
@@ -35,12 +35,12 @@ func main() {
 	server.Use(cors.New(config))
 
 	// 配置异常处理中间件
-	server.Use(handler.CommonErrorHandler())
+	server.Use(middlewares.CommonErrorHandler())
 
 	// 初始化认证service
 	var (
-		authService    = service.NewAuthService(db)
-		authController = controller.NewAuthController(authService)
+		authService    = services.NewAuthService(db)
+		authController = controllers.NewAuthController(authService)
 	)
 	if authService == nil || authController == nil {
 		fmt.Println("初始化认证service失败")
@@ -48,18 +48,18 @@ func main() {
 	}
 
 	// 配置版本检测中间件
-	server.Use(handler.VersionHandler("1.2.0"))
+	server.Use(middlewares.VersionHandler("1.2.0"))
 
 	// 配置DB事务中间件
-	server.Use(handler.TransactionHandler(db))
+	server.Use(middlewares.TransactionHandler(db))
 
 	// 配置认证中间件
-	server.Use(handler.AuthHandler(authService.Check))
+	server.Use(middlewares.AuthHandler(authService.Check))
 
 	// 初始化业务service
 	var (
-		chatService    = service.NewChatService(db)
-		chatController = controller.NewChatController(authService, chatService)
+		chatService    = services.NewChatService(db)
+		chatController = controllers.NewChatController(authService, chatService)
 	)
 	if chatService == nil || chatController == nil {
 		fmt.Println("初始化业务service失败")

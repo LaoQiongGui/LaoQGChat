@@ -1,14 +1,13 @@
-package handler
+package middlewares
 
 import (
-	"LaoQGChat/dto"
-	"LaoQGChat/myerror"
-
+	"LaoQGChat/api/models"
+	"LaoQGChat/internal/myerrors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func AuthHandler(checkFunc func(loginToken uuid.UUID) (*dto.AuthDto, error)) gin.HandlerFunc {
+func AuthHandler(checkFunc func(loginToken uuid.UUID) (*models.AuthDto, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 前处理
 		// 认证除外
@@ -16,13 +15,13 @@ func AuthHandler(checkFunc func(loginToken uuid.UUID) (*dto.AuthDto, error)) gin
 			var (
 				err        error
 				loginToken uuid.UUID
-				authDto    *dto.AuthDto
+				authDto    *models.AuthDto
 			)
 
 			// 获取loginToken
 			loginToken, err = uuid.Parse(ctx.GetHeader("LoginToken"))
 			if err != nil {
-				err = &myerror.CustomError{
+				err = &myerrors.CustomError{
 					StatusCode:  200,
 					MessageCode: "EAU01",
 					MessageText: "用户未登录。",

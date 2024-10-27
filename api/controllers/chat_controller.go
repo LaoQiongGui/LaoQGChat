@@ -1,9 +1,8 @@
-package controller
+package controllers
 
 import (
-	"LaoQGChat/dto"
-	"LaoQGChat/service"
-
+	"LaoQGChat/api/models"
+	"LaoQGChat/api/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,11 +13,11 @@ type ChatController interface {
 }
 
 type chatController struct {
-	authService service.AuthService
-	service     service.ChatService
+	authService services.AuthService
+	service     services.ChatService
 }
 
-func NewChatController(authService service.AuthService, chatService service.ChatService) ChatController {
+func NewChatController(authService services.AuthService, chatService services.ChatService) ChatController {
 	return chatController{
 		authService: authService,
 		service:     chatService,
@@ -26,7 +25,7 @@ func NewChatController(authService service.AuthService, chatService service.Chat
 }
 
 func (c chatController) StartChat(ctx *gin.Context) {
-	var inDto dto.ChatInDto
+	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
@@ -39,7 +38,7 @@ func (c chatController) StartChat(ctx *gin.Context) {
 }
 
 func (c chatController) Chat(ctx *gin.Context) {
-	var inDto dto.ChatInDto
+	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200
@@ -52,7 +51,7 @@ func (c chatController) Chat(ctx *gin.Context) {
 }
 
 func (c chatController) EndChat(ctx *gin.Context) {
-	var inDto dto.ChatInDto
+	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		ctx.Keys["StatusCode"] = 200

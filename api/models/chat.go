@@ -1,4 +1,4 @@
-package dto
+package models
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 
 type ChatInDto struct {
 	SessionId uuid.UUID                     `json:"sessionId"`
+	Model     string                        `json:"model"`
 	Contents  []ChatQuestionContentPartsDto `json:"contents"`
 }
 

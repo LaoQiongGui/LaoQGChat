@@ -1,4 +1,4 @@
-package myerror
+package myerrors
 
 import "fmt"
 

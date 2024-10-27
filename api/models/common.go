@@ -1,4 +1,4 @@
-package dto
+package models
 
 type RestOutDto struct {
 	Common RestCommonDto `json:"common"`

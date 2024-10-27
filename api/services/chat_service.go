@@ -1,8 +1,8 @@
-package service
+package services
 
 import (
-	"LaoQGChat/dto"
-	"LaoQGChat/myerror"
+	"LaoQGChat/api/models"
+	"LaoQGChat/internal/myerrors"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -19,9 +19,9 @@ import (
 )
 
 type ChatService interface {
-	StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto
-	Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto
-	EndChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto
+	StartChat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto
+	Chat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto
+	EndChat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto
 }
 
 type chatService struct {
@@ -110,7 +110,7 @@ func NewChatService(db *sql.DB) ChatService {
 	return service
 }
 
-func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
+func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto {
 	var (
 		userName       = ctx.GetString("UserName")
 		err            error
@@ -118,14 +118,14 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 		currentTime    = time.Now()
 		sessionId      = uuid.New()
 		chatContextStr []byte
-		chatContext    dto.ChatContext
-		outDto         = new(dto.ChatOutDto)
+		chatContext    models.ChatContext
+		outDto         = new(models.ChatOutDto)
 	)
 
 	// azopenai认证
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "ECH01",
 			MessageText: "Azure OpenAI认证失败，请联系管理员。",
@@ -145,7 +145,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 		DeploymentName: &service.modelDeploymentID,
 	}, nil)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "ECH02",
 			MessageText: "Azure OpenAI获取答案失败，请联系管理员。",
@@ -153,7 +153,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 		panic(err)
 	}
 	if resp.Choices == nil || len(resp.Choices) == 0 {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  100,
 			MessageCode: "WCH01",
 			MessageText: "无法回答该问题。",
@@ -173,7 +173,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 	// TODO：设置选项
 
 	//
-	chatContext = dto.ChatContext{
+	chatContext = models.ChatContext{
 		ChatMessages: append(messages, &azopenai.ChatRequestAssistantMessage{
 			Content: to.Ptr(answer),
 		}),
@@ -195,7 +195,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto dto.ChatInDto) *dt
 	return outDto
 }
 
-func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
+func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto {
 	var (
 		userName       = ctx.GetString("UserName")
 		permission     = ctx.GetString("Permission")
@@ -204,22 +204,22 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 		currentTime    = time.Now()
 		sessionId      uuid.UUID
 		chatContextStr []byte
-		chatContext    dto.ChatContext
-		outDto         = new(dto.ChatOutDto)
+		chatContext    models.ChatContext
+		outDto         = new(models.ChatOutDto)
 	)
 
 	// 非管理员用户检测SessionId是否在自己的对话记录中
 	if permission != "super" {
 		rows, err := service.getUserChatContexts.Query(userName)
 		if err != nil {
-			err = &myerror.CustomError{
+			err = &myerrors.CustomError{
 				StatusCode:  200,
 				MessageCode: "ECH03",
 				MessageText: "不存在该会话或该会话已被删除。",
 			}
 			panic(err)
 		}
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "ECH03",
 			MessageText: "不存在该会话或该会话已被删除。",
@@ -241,7 +241,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 	// 获取对话上下文
 	err = service.getChatContextById.QueryRow(inDto.SessionId).Scan(&chatContextStr)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "ECH03",
 			MessageText: "不存在该会话或该会话已被删除。",
@@ -251,7 +251,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 
 	err = json.Unmarshal(chatContextStr, &chatContext)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  990,
 			MessageCode: "ECH91",
 			MessageText: "JSON反序列化失败。",
@@ -262,7 +262,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 	// azopenai认证
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "ECH01",
 			MessageText: "Azure OpenAI认证失败，请联系管理员。",
@@ -283,7 +283,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 		DeploymentName: &service.modelDeploymentID,
 	}, nil)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "ECH02",
 			MessageText: "Azure OpenAI获取答案失败，请联系管理员。",
@@ -291,7 +291,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 		panic(err)
 	}
 	if resp.Choices == nil || len(resp.Choices) == 0 {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  100,
 			MessageCode: "WCH01",
 			MessageText: "无法回答该问题。",
@@ -314,7 +314,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 	// 更新对话上下文
 	chatContextStr, err = json.Marshal(chatContext)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  990,
 			MessageCode: "ECH90",
 			MessageText: "JSON序列化失败。",
@@ -332,7 +332,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto dto.ChatInDto) *dto.Cha
 	return outDto
 }
 
-func (service *chatService) EndChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.ChatOutDto {
+func (service *chatService) EndChat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto {
 	var (
 		userName   = ctx.GetString("UserName")
 		permission = ctx.GetString("Permission")
@@ -344,7 +344,7 @@ func (service *chatService) EndChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.
 	if permission != "super" {
 		rows, err := service.getUserChatContexts.Query(userName)
 		if err != nil {
-			err = &myerror.CustomError{
+			err = &myerrors.CustomError{
 				StatusCode:  200,
 				MessageCode: "ECH03",
 				MessageText: "不存在该会话或该会话已被删除。",
@@ -362,7 +362,7 @@ func (service *chatService) EndChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.
 			}
 		}
 		if err != nil {
-			err = &myerror.CustomError{
+			err = &myerrors.CustomError{
 				StatusCode:  200,
 				MessageCode: "ECH03",
 				MessageText: "不存在该会话或该会话已被删除。",
@@ -374,7 +374,7 @@ func (service *chatService) EndChat(ctx *gin.Context, inDto dto.ChatInDto) *dto.
 	// 删除对话上下文
 	_, err = service.deleteChatContext.Exec(inDto.SessionId)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "ECH03",
 			MessageText: "不存在该会话或该会话已被删除。",

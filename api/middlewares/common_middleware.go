@@ -1,9 +1,8 @@
-package handler
+package middlewares
 
 import (
-	"LaoQGChat/dto"
-	"LaoQGChat/myerror"
-
+	"LaoQGChat/api/models"
+	"LaoQGChat/internal/myerrors"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
 )
@@ -21,26 +20,26 @@ func CommonErrorHandler() gin.HandlerFunc {
 }
 
 func errorHandler(ctx *gin.Context) {
-	restOutDto := dto.RestOutDto{}
+	restOutDto := models.RestOutDto{}
 
 	// 填充响应体Common部
 	if err := recover(); err != nil {
 		switch myError := err.(type) {
-		case *myerror.CustomError:
-			restOutDto.Common = dto.RestCommonDto{
+		case *myerrors.CustomError:
+			restOutDto.Common = models.RestCommonDto{
 				Status:      myError.StatusCode,
 				MessageCode: myError.MessageCode,
 				MessageText: myError.MessageText,
 			}
 		default:
-			restOutDto.Common = dto.RestCommonDto{
+			restOutDto.Common = models.RestCommonDto{
 				Status:      990,
 				MessageCode: "E9999",
 				MessageText: "System Error",
 			}
 		}
 	} else {
-		restOutDto.Common = dto.RestCommonDto{
+		restOutDto.Common = models.RestCommonDto{
 			Status:      0,
 			MessageCode: "N0000",
 			MessageText: "",

@@ -1,7 +1,7 @@
-package handler
+package middlewares
 
 import (
-	"LaoQGChat/myerror"
+	"LaoQGChat/internal/myerrors"
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +13,7 @@ func TransactionHandler(db *sql.DB) gin.HandlerFunc {
 		// 开启事务
 		tx, err := db.Begin()
 		if err != nil {
-			err := &myerror.CustomError{
+			err := &myerrors.CustomError{
 				StatusCode:  300,
 				MessageCode: "EDB01",
 				MessageText: "数据库连接失败，请联系管理员。",
@@ -25,7 +25,7 @@ func TransactionHandler(db *sql.DB) gin.HandlerFunc {
 		defer func() {
 			if err := recover(); err != nil {
 				switch myError := err.(type) {
-				case *myerror.CustomError:
+				case *myerrors.CustomError:
 					if myError.StatusCode < 200 {
 						// 消息或警告：提交事务
 						_ = tx.Commit()

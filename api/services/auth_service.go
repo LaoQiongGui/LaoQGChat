@@ -1,8 +1,8 @@
-package service
+package services
 
 import (
-	"LaoQGChat/dto"
-	"LaoQGChat/myerror"
+	"LaoQGChat/api/models"
+	"LaoQGChat/internal/myerrors"
 	"database/sql"
 	"time"
 
@@ -12,8 +12,8 @@ import (
 )
 
 type AuthService interface {
-	Login(ctx *gin.Context, inDto dto.AuthDto) *dto.AuthDto
-	Check(loginToken uuid.UUID) (*dto.AuthDto, error)
+	Login(ctx *gin.Context, inDto models.AuthDto) *models.AuthDto
+	Check(loginToken uuid.UUID) (*models.AuthDto, error)
 }
 
 type authService struct {
@@ -56,7 +56,7 @@ func NewAuthService(db *sql.DB) AuthService {
 	return service
 }
 
-func (service *authService) Login(ctx *gin.Context, inDto dto.AuthDto) *dto.AuthDto {
+func (service *authService) Login(ctx *gin.Context, inDto models.AuthDto) *models.AuthDto {
 	var (
 		err         error
 		password    string
@@ -66,7 +66,7 @@ func (service *authService) Login(ctx *gin.Context, inDto dto.AuthDto) *dto.Auth
 	)
 	err = service.getUserInfo.QueryRow(inDto.Username).Scan(&password, &permission)
 	if err != nil || password != inDto.Password {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "EAU00",
 			MessageText: "账号或密码错误。",
@@ -77,14 +77,14 @@ func (service *authService) Login(ctx *gin.Context, inDto dto.AuthDto) *dto.Auth
 	if err != nil {
 		panic(err)
 	}
-	outDto := &dto.AuthDto{
+	outDto := &models.AuthDto{
 		LoginToken: loginToken,
 		Permission: permission,
 	}
 	return outDto
 }
 
-func (service *authService) Check(loginToken uuid.UUID) (*dto.AuthDto, error) {
+func (service *authService) Check(loginToken uuid.UUID) (*models.AuthDto, error) {
 	var (
 		err           error
 		userName      string
@@ -96,7 +96,7 @@ func (service *authService) Check(loginToken uuid.UUID) (*dto.AuthDto, error) {
 	// 用户存在check
 	err = service.getLoginStatusByToken.QueryRow(loginToken).Scan(&userName, &lastLoginTime)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "EAU01",
 			MessageText: "用户未登录。",
@@ -104,7 +104,7 @@ func (service *authService) Check(loginToken uuid.UUID) (*dto.AuthDto, error) {
 		return nil, err
 	}
 	if currentTime.Sub(lastLoginTime).Hours() >= 24 {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "EAU02",
 			MessageText: "登录已超时，请重新登录。",
@@ -113,7 +113,7 @@ func (service *authService) Check(loginToken uuid.UUID) (*dto.AuthDto, error) {
 	}
 	err = service.getUserInfo.QueryRow(userName).Scan(&password, &permission)
 	if err != nil {
-		err = &myerror.CustomError{
+		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "EAU03",
 			MessageText: "用户已注销。",
@@ -121,7 +121,7 @@ func (service *authService) Check(loginToken uuid.UUID) (*dto.AuthDto, error) {
 		return nil, err
 	}
 
-	outDto := &dto.AuthDto{
+	outDto := &models.AuthDto{
 		LoginToken: loginToken,
 		Permission: permission,
 	}
