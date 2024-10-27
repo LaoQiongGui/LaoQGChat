@@ -3,6 +3,7 @@ package controllers
 import (
 	"LaoQGChat/api/models"
 	"LaoQGChat/api/services"
+	"LaoQGChat/internal/myerrors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,10 +29,13 @@ func (c chatController) StartChat(ctx *gin.Context) {
 	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
-		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0000"
-		ctx.Keys["MessageText"] = "请求体格式错误。"
-		panic(err)
+		err = &myerrors.CustomError{
+			StatusCode:  200,
+			MessageCode: "E0000",
+			MessageText: "请求体格式错误。",
+		}
+		_ = ctx.Error(err)
+		return
 	}
 	outDto := c.service.StartChat(ctx, inDto)
 	ctx.Set("ResponseData", outDto)
@@ -41,10 +45,13 @@ func (c chatController) Chat(ctx *gin.Context) {
 	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
-		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0000"
-		ctx.Keys["MessageText"] = "请求体格式错误。"
-		panic(err)
+		err = &myerrors.CustomError{
+			StatusCode:  200,
+			MessageCode: "E0000",
+			MessageText: "请求体格式错误。",
+		}
+		_ = ctx.Error(err)
+		return
 	}
 	outDto := c.service.Chat(ctx, inDto)
 	ctx.Set("ResponseData", outDto)
@@ -54,10 +61,13 @@ func (c chatController) EndChat(ctx *gin.Context) {
 	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
-		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0000"
-		ctx.Keys["MessageText"] = "请求体格式错误。"
-		panic(err)
+		err = &myerrors.CustomError{
+			StatusCode:  200,
+			MessageCode: "E0000",
+			MessageText: "请求体格式错误。",
+		}
+		_ = ctx.Error(err)
+		return
 	}
 	outDto := c.service.EndChat(ctx, inDto)
 	ctx.Set("ResponseData", outDto)

@@ -3,14 +3,31 @@ package middlewares
 import (
 	"LaoQGChat/api/models"
 	"LaoQGChat/internal/myerrors"
+	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/render"
+	"net/http"
 )
 
-func CommonErrorHandler() gin.HandlerFunc {
+func ErrorHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 前处理
-		defer errorHandler(ctx)
+		defer func() {
+			response := models.Response{}
+
+			if err := recover(); err != nil {
+				// 处理 panic
+				response.Common = models.ResponseCommonSystemError
+			} else {
+				// 处理错误信息
+				response.Common = makeResponseCommon(ctx)
+			}
+
+			// 填充响应体Data部
+			response.Data = makeResponseData(ctx)
+
+			// 设置响应
+			ctx.JSON(http.StatusOK, response)
+		}()
 
 		// 下一层
 		ctx.Next()
@@ -19,40 +36,29 @@ func CommonErrorHandler() gin.HandlerFunc {
 	}
 }
 
-func errorHandler(ctx *gin.Context) {
-	restOutDto := models.RestOutDto{}
-
-	// 填充响应体Common部
-	if err := recover(); err != nil {
-		switch myError := err.(type) {
-		case *myerrors.CustomError:
-			restOutDto.Common = models.RestCommonDto{
+func makeResponseCommon(ctx *gin.Context) models.ResponseCommon {
+	if err := ctx.Errors.Last(); err != nil {
+		// 处理自定义异常
+		var myError *myerrors.CustomError
+		if errors.As(err.Err, &myError) {
+			return models.ResponseCommon{
 				Status:      myError.StatusCode,
 				MessageCode: myError.MessageCode,
 				MessageText: myError.MessageText,
 			}
-		default:
-			restOutDto.Common = models.RestCommonDto{
-				Status:      990,
-				MessageCode: "E9999",
-				MessageText: "System Error",
-			}
 		}
+		// 处理其他异常
+		return models.ResponseCommonSystemError
 	} else {
-		restOutDto.Common = models.RestCommonDto{
-			Status:      0,
-			MessageCode: "N0000",
-			MessageText: "",
-		}
+		// 正常返回
+		return models.ResponseCommonSuccess
 	}
+}
 
-	// 填充响应体Data部
+func makeResponseData(ctx *gin.Context) interface{} {
 	if data, exists := ctx.Get("ResponseData"); exists {
-		restOutDto.Data = data
+		return data
 	} else {
-		restOutDto.Data = nil
+		return nil
 	}
-
-	// 设置响应
-	ctx.Render(200, render.JSON{Data: restOutDto})
 }

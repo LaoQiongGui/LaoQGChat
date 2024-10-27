@@ -130,7 +130,8 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 			MessageCode: "ECH01",
 			MessageText: "Azure OpenAI认证失败，请联系管理员。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	// 将inDto转为azopenai的输入
@@ -150,7 +151,8 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 			MessageCode: "ECH02",
 			MessageText: "Azure OpenAI获取答案失败，请联系管理员。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 	if resp.Choices == nil || len(resp.Choices) == 0 {
 		err = &myerrors.CustomError{
@@ -158,7 +160,8 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 			MessageCode: "WCH01",
 			MessageText: "无法回答该问题。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	// 设置回答
@@ -182,11 +185,13 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 	// 插入对话上下文
 	chatContextStr, err = json.Marshal(chatContext)
 	if err != nil {
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 	_, err = service.insertChatContext.Exec(userName, sessionId, chatContextStr, currentTime)
 	if err != nil {
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	outDto.SessionId = sessionId
@@ -217,7 +222,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 				MessageCode: "ECH03",
 				MessageText: "不存在该会话或该会话已被删除。",
 			}
-			panic(err)
+			_ = ctx.Error(err)
+			return nil
 		}
 		err = &myerrors.CustomError{
 			StatusCode:  200,
@@ -226,7 +232,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 		}
 		for rows.Next() {
 			if rows.Scan(&sessionId) != nil {
-				panic(err)
+				_ = ctx.Error(err)
+				return nil
 			}
 			if sessionId == inDto.SessionId {
 				err = nil
@@ -234,7 +241,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 			}
 		}
 		if err != nil {
-			panic(err)
+			_ = ctx.Error(err)
+			return nil
 		}
 	}
 
@@ -246,7 +254,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 			MessageCode: "ECH03",
 			MessageText: "不存在该会话或该会话已被删除。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	err = json.Unmarshal(chatContextStr, &chatContext)
@@ -256,7 +265,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 			MessageCode: "ECH91",
 			MessageText: "JSON反序列化失败。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	// azopenai认证
@@ -267,7 +277,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 			MessageCode: "ECH01",
 			MessageText: "Azure OpenAI认证失败，请联系管理员。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	// 将inDto转为azopenai的输入
@@ -288,7 +299,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 			MessageCode: "ECH02",
 			MessageText: "Azure OpenAI获取答案失败，请联系管理员。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 	if resp.Choices == nil || len(resp.Choices) == 0 {
 		err = &myerrors.CustomError{
@@ -296,7 +308,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 			MessageCode: "WCH01",
 			MessageText: "无法回答该问题。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	answer := *resp.Choices[0].Message.Content
@@ -319,11 +332,13 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 			MessageCode: "ECH90",
 			MessageText: "JSON序列化失败。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 	_, err = service.updateChatContext.Exec(inDto.SessionId, chatContextStr, currentTime)
 	if err != nil {
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 
 	outDto.SessionId = inDto.SessionId
@@ -349,12 +364,12 @@ func (service *chatService) EndChat(ctx *gin.Context, inDto models.ChatInDto) *m
 				MessageCode: "ECH03",
 				MessageText: "不存在该会话或该会话已被删除。",
 			}
-			panic(err)
+			_ = ctx.Error(err)
 		}
 		err = errors.New("")
 		for rows.Next() {
 			if rows.Scan(&sessionId) != nil {
-				panic(err)
+				_ = ctx.Error(err)
 			}
 			if sessionId == inDto.SessionId {
 				err = nil
@@ -367,7 +382,8 @@ func (service *chatService) EndChat(ctx *gin.Context, inDto models.ChatInDto) *m
 				MessageCode: "ECH03",
 				MessageText: "不存在该会话或该会话已被删除。",
 			}
-			panic(err)
+			_ = ctx.Error(err)
+			return nil
 		}
 	}
 
@@ -379,7 +395,8 @@ func (service *chatService) EndChat(ctx *gin.Context, inDto models.ChatInDto) *m
 			MessageCode: "ECH03",
 			MessageText: "不存在该会话或该会话已被删除。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 	return nil
 }

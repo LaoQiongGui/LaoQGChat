@@ -71,11 +71,13 @@ func (service *authService) Login(ctx *gin.Context, inDto models.AuthDto) *model
 			MessageCode: "EAU00",
 			MessageText: "账号或密码错误。",
 		}
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 	_, err = service.updateLoginStatus.Exec(inDto.Username, currentTime, loginToken)
 	if err != nil {
-		panic(err)
+		_ = ctx.Error(err)
+		return nil
 	}
 	outDto := &models.AuthDto{
 		LoginToken: loginToken,

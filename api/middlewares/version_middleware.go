@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"LaoQGChat/internal/myerrors"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,8 @@ func VersionHandler(version string) gin.HandlerFunc {
 				MessageCode: "EVE01",
 				MessageText: "版本号格式错误。",
 			}
-			panic(err)
+			_ = ctx.AbortWithError(http.StatusUpgradeRequired, err)
+			return
 		}
 
 		if versionInList[0] != versionList[0] || versionInList[1] != versionList[1] {
@@ -28,7 +30,8 @@ func VersionHandler(version string) gin.HandlerFunc {
 				MessageCode: "EVE02",
 				MessageText: "版本过低，请获取最新的app。",
 			}
-			panic(err)
+			_ = ctx.AbortWithError(http.StatusUpgradeRequired, err)
+			return
 		}
 
 		// 下一层

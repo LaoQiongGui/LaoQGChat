@@ -35,7 +35,7 @@ func main() {
 	server.Use(cors.New(config))
 
 	// 配置异常处理中间件
-	server.Use(middlewares.CommonErrorHandler())
+	server.Use(middlewares.ErrorHandler())
 
 	// 初始化认证service
 	var (

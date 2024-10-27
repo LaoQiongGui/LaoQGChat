@@ -1,6 +1,8 @@
 package myerrors
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type CustomError struct {
 	StatusCode  int

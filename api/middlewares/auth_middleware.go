@@ -5,6 +5,7 @@ import (
 	"LaoQGChat/internal/myerrors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"net/http"
 )
 
 func AuthHandler(checkFunc func(loginToken uuid.UUID) (*models.AuthDto, error)) gin.HandlerFunc {
@@ -26,13 +27,20 @@ func AuthHandler(checkFunc func(loginToken uuid.UUID) (*models.AuthDto, error)) 
 					MessageCode: "EAU01",
 					MessageText: "用户未登录。",
 				}
-				panic(err)
+				_ = ctx.AbortWithError(http.StatusNonAuthoritativeInfo, err)
+				return
 			}
 
 			// 验证登陆状态
 			authDto, err = checkFunc(loginToken)
 			if err != nil {
-				panic(err)
+				err = &myerrors.CustomError{
+					StatusCode:  200,
+					MessageCode: "EAU01",
+					MessageText: "用户未登录。",
+				}
+				_ = ctx.AbortWithError(http.StatusNonAuthoritativeInfo, err)
+				return
 			}
 
 			// 设置用户信息

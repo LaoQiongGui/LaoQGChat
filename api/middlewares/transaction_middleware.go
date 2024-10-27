@@ -3,7 +3,7 @@ package middlewares
 import (
 	"LaoQGChat/internal/myerrors"
 	"database/sql"
-
+	"errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,14 +18,22 @@ func TransactionHandler(db *sql.DB) gin.HandlerFunc {
 				MessageCode: "EDB01",
 				MessageText: "数据库连接失败，请联系管理员。",
 			}
-			panic(err)
+			_ = ctx.Error(err)
 		}
 
 		// 结束事务
 		defer func() {
+			// 处理 panic
 			if err := recover(); err != nil {
-				switch myError := err.(type) {
-				case *myerrors.CustomError:
+				_ = tx.Rollback()
+				panic(err)
+			}
+
+			// 处理错误信息
+			if err := ctx.Errors.Last(); err != nil {
+				// 处理自定义异常
+				var myError *myerrors.CustomError
+				if errors.As(err.Err, &myError) {
 					if myError.StatusCode < 200 {
 						// 消息或警告：提交事务
 						_ = tx.Commit()
@@ -33,12 +41,10 @@ func TransactionHandler(db *sql.DB) gin.HandlerFunc {
 						// 异常：回滚事务
 						_ = tx.Rollback()
 					}
-				default:
+				} else {
 					// 异常：回滚事务
 					_ = tx.Rollback()
 				}
-				// 向外传递异常
-				panic(err)
 			} else {
 				// 正常：提交事务
 				_ = tx.Commit()

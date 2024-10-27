@@ -3,6 +3,8 @@ package controllers
 import (
 	"LaoQGChat/api/models"
 	"LaoQGChat/api/services"
+	"LaoQGChat/internal/myerrors"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,10 +26,13 @@ func (c *authController) Login(ctx *gin.Context) {
 	inDto := models.AuthDto{}
 	err := ctx.Bind(&inDto)
 	if err != nil {
-		ctx.Keys["StatusCode"] = 200
-		ctx.Keys["MessageCode"] = "E0000"
-		ctx.Keys["MessageText"] = "请求体格式错误。"
-		panic(err)
+		err = &myerrors.CustomError{
+			StatusCode:  200,
+			MessageCode: "E0000",
+			MessageText: "请求体格式错误。",
+		}
+		_ = ctx.Error(err)
+		return
 	}
 	outDto := c.service.Login(ctx, inDto)
 	ctx.Set("ResponseData", outDto)
