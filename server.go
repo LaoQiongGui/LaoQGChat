@@ -3,7 +3,7 @@ package main
 import (
 	"LaoQGChat/api/controllers"
 	"LaoQGChat/api/middlewares"
-	"LaoQGChat/api/services"
+	"LaoQGChat/internal/services"
 	"database/sql"
 	"fmt"
 	"time"
@@ -59,7 +59,7 @@ func main() {
 	// 初始化业务service
 	var (
 		chatService    = services.NewChatService(db)
-		chatController = controllers.NewChatController(authService, chatService)
+		chatController = controllers.NewChatController(chatService)
 	)
 	if chatService == nil || chatController == nil {
 		fmt.Println("初始化业务service失败")

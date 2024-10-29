@@ -2,9 +2,8 @@ package controllers
 
 import (
 	"LaoQGChat/api/models"
-	"LaoQGChat/api/services"
 	"LaoQGChat/internal/myerrors"
-
+	"LaoQGChat/internal/services"
 	"github.com/gin-gonic/gin"
 )
 

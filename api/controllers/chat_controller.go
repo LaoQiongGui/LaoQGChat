@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"LaoQGChat/api/models"
-	"LaoQGChat/api/services"
 	"LaoQGChat/internal/myerrors"
+	"LaoQGChat/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,14 +14,12 @@ type ChatController interface {
 }
 
 type chatController struct {
-	authService services.AuthService
-	service     services.ChatService
+	service services.ChatService
 }
 
-func NewChatController(authService services.AuthService, chatService services.ChatService) ChatController {
+func NewChatController(chatService services.ChatService) ChatController {
 	return chatController{
-		authService: authService,
-		service:     chatService,
+		service: chatService,
 	}
 }
 
