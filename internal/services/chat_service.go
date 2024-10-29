@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -111,6 +112,8 @@ func NewChatService(db *sql.DB) ChatService {
 }
 
 func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto {
+	fmt.Println("Calling service StartChat")
+	defer fmt.Println("Returning service StartChat")
 	var (
 		userName       = ctx.GetString("UserName")
 		err            error
@@ -201,6 +204,8 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 }
 
 func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto {
+	fmt.Println("Calling service ChatInDto")
+	defer fmt.Println("Returning service ChatInDto")
 	var (
 		userName       = ctx.GetString("UserName")
 		permission     = ctx.GetString("Permission")
@@ -348,6 +353,8 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 }
 
 func (service *chatService) EndChat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto {
+	fmt.Println("Calling service EndChat")
+	defer fmt.Println("Returning service EndChat")
 	var (
 		userName   = ctx.GetString("UserName")
 		permission = ctx.GetString("Permission")
