@@ -30,7 +30,6 @@ type chatService struct {
 	modelDeploymentID   string
 	azureOpenAIEndpoint string
 
-	getAllChatContexts  *sql.Stmt
 	getUserChatContexts *sql.Stmt
 	getChatContextById  *sql.Stmt
 	insertChatContext   *sql.Stmt
@@ -41,21 +40,12 @@ type chatService struct {
 func NewChatService(db *sql.DB) ChatService {
 	var (
 		err                 error
-		getAllChatContexts  *sql.Stmt
 		getUserChatContexts *sql.Stmt
 		getChatContextById  *sql.Stmt
 		insertChatContext   *sql.Stmt
 		updateChatContext   *sql.Stmt
 		deleteChatContext   *sql.Stmt
 	)
-
-	getAllChatContexts, err = db.Prepare(`
-		SELECT user_name, session_id
-		FROM chat_record
-		ORDER BY user_name, create_timestamp`)
-	if err != nil {
-		return nil
-	}
 
 	getUserChatContexts, err = db.Prepare(`
 		SELECT session_id
@@ -69,7 +59,8 @@ func NewChatService(db *sql.DB) ChatService {
 	getChatContextById, err = db.Prepare(`
 		SELECT context
 		FROM chat_record
-		WHERE session_id = $1`)
+		WHERE session_id = $1
+		FOR UPDATE`)
 	if err != nil {
 		return nil
 	}
@@ -101,7 +92,6 @@ func NewChatService(db *sql.DB) ChatService {
 		azureOpenAIKey:      os.Getenv("AOAI_API_KEY"),
 		modelDeploymentID:   os.Getenv("AOAI_CHAT_COMPLETIONS_MODEL"),
 		azureOpenAIEndpoint: os.Getenv("AOAI_ENDPOINT"),
-		getAllChatContexts:  getAllChatContexts,
 		getUserChatContexts: getUserChatContexts,
 		getChatContextById:  getChatContextById,
 		insertChatContext:   insertChatContext,
@@ -126,6 +116,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 	)
 
 	// azopenai认证
+	fmt.Println("Debug StartChat 001")
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
 		err = &myerrors.CustomError{
@@ -138,13 +129,19 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 	}
 
 	// 将inDto转为azopenai的输入
+	fmt.Println("Debug StartChat 002")
 	chatRequestUserMessage := inDto.ToAzopenai()
 	messages := []azopenai.ChatRequestMessageClassification{
 		&chatRequestUserMessage,
 	}
 
+	// 设置外部API超时时间
+	azopenaiContext, cancel := context.WithTimeout(ctx.Request.Context(), 120*time.Second)
+	defer cancel()
+
 	// 发送azopenai请求
-	resp, err := client.GetChatCompletions(context.TODO(), azopenai.ChatCompletionsOptions{
+	fmt.Println("Debug StartChat 003")
+	resp, err := client.GetChatCompletions(azopenaiContext, azopenai.ChatCompletionsOptions{
 		Messages:       messages,
 		DeploymentName: &service.modelDeploymentID,
 	}, nil)
@@ -168,6 +165,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 	}
 
 	// 设置回答
+	fmt.Println("Debug StartChat 004")
 	answer := *resp.Choices[0].Message.Content
 	var choices = make([]string, 0)
 	if len(resp.Choices) > 1 {
@@ -179,6 +177,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 	// TODO：设置选项
 
 	//
+	fmt.Println("Debug StartChat 005")
 	chatContext = models.ChatContext{
 		ChatMessages: append(messages, &azopenai.ChatRequestAssistantMessage{
 			Content: to.Ptr(answer),
@@ -186,6 +185,7 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 	}
 
 	// 插入对话上下文
+	fmt.Println("Debug StartChat 006")
 	chatContextStr, err = json.Marshal(chatContext)
 	if err != nil {
 		_ = ctx.Error(err)
@@ -204,8 +204,8 @@ func (service *chatService) StartChat(ctx *gin.Context, inDto models.ChatInDto) 
 }
 
 func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *models.ChatOutDto {
-	fmt.Println("Calling service ChatInDto")
-	defer fmt.Println("Returning service ChatInDto")
+	fmt.Println("Calling service Chat")
+	defer fmt.Println("Returning service Chat")
 	var (
 		userName       = ctx.GetString("UserName")
 		permission     = ctx.GetString("Permission")
@@ -219,6 +219,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 	)
 
 	// 非管理员用户检测SessionId是否在自己的对话记录中
+	fmt.Println("Debug Chat 001")
 	if permission != "super" {
 		rows, err := service.getUserChatContexts.Query(userName)
 		if err != nil {
@@ -252,6 +253,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 	}
 
 	// 获取对话上下文
+	fmt.Println("Debug Chat 002")
 	err = service.getChatContextById.QueryRow(inDto.SessionId).Scan(&chatContextStr)
 	if err != nil {
 		err = &myerrors.CustomError{
@@ -263,6 +265,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 		return nil
 	}
 
+	fmt.Println("Debug Chat 003")
 	err = json.Unmarshal(chatContextStr, &chatContext)
 	if err != nil {
 		err = &myerrors.CustomError{
@@ -275,6 +278,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 	}
 
 	// azopenai认证
+	fmt.Println("Debug Chat 004")
 	client, err := azopenai.NewClientWithKeyCredential(service.azureOpenAIEndpoint, keyCredential, nil)
 	if err != nil {
 		err = &myerrors.CustomError{
@@ -287,14 +291,20 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 	}
 
 	// 将inDto转为azopenai的输入
+	fmt.Println("Debug Chat 005")
 	chatRequestUserMessage := inDto.ToAzopenai()
 	messages := []azopenai.ChatRequestMessageClassification{
 		&chatRequestUserMessage,
 	}
 
+	// 设置外部API超时时间
+	azopenaiContext, cancel := context.WithTimeout(ctx.Request.Context(), 120*time.Second)
+	defer cancel()
+
 	// 将转换后的inDto拼接在原回答之后
+	fmt.Println("Debug Chat 006")
 	messages = append(chatContext.ChatMessages, messages...)
-	resp, err := client.GetChatCompletions(context.TODO(), azopenai.ChatCompletionsOptions{
+	resp, err := client.GetChatCompletions(azopenaiContext, azopenai.ChatCompletionsOptions{
 		Messages:       messages,
 		DeploymentName: &service.modelDeploymentID,
 	}, nil)
@@ -317,6 +327,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 		return nil
 	}
 
+	fmt.Println("Debug Chat 007")
 	answer := *resp.Choices[0].Message.Content
 	var choices = make([]string, 0)
 	if len(resp.Choices) > 1 {
@@ -330,6 +341,7 @@ func (service *chatService) Chat(ctx *gin.Context, inDto models.ChatInDto) *mode
 		})
 
 	// 更新对话上下文
+	fmt.Println("Debug Chat 008")
 	chatContextStr, err = json.Marshal(chatContext)
 	if err != nil {
 		err = &myerrors.CustomError{

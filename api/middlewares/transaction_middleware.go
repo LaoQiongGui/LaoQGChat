@@ -2,16 +2,22 @@ package middlewares
 
 import (
 	"LaoQGChat/internal/myerrors"
+	"context"
 	"database/sql"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"time"
 )
 
 func TransactionHandler(db *sql.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 前处理
+		// 设置事务超时时间
+		transactionContext, cancel := context.WithTimeout(ctx.Request.Context(), time.Second*180)
+		defer cancel()
+
 		// 开启事务
-		tx, err := db.Begin()
+		tx, err := db.BeginTx(transactionContext, nil)
 		if err != nil {
 			err := &myerrors.CustomError{
 				StatusCode:  300,
