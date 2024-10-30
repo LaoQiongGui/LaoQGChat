@@ -37,6 +37,15 @@ func main() {
 	// 配置异常处理中间件
 	server.Use(middlewares.ErrorHandler())
 
+	// 配置并发控制中间件
+	server.Use(middlewares.ConcurrentControlHandler(5, 10))
+
+	// 配置版本检测中间件
+	server.Use(middlewares.VersionHandler("1.2.0"))
+
+	// 配置DB事务中间件
+	server.Use(middlewares.TransactionHandler(db))
+
 	// 初始化认证service
 	var (
 		authService    = services.NewAuthService(db)
@@ -46,12 +55,6 @@ func main() {
 		fmt.Println("初始化认证service失败")
 		return
 	}
-
-	// 配置版本检测中间件
-	server.Use(middlewares.VersionHandler("1.2.0"))
-
-	// 配置DB事务中间件
-	server.Use(middlewares.TransactionHandler(db))
 
 	// 配置认证中间件
 	server.Use(middlewares.AuthHandler(authService.Check))
