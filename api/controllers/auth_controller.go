@@ -4,7 +4,7 @@ import (
 	"LaoQGChat/api/models"
 	"LaoQGChat/internal/myerrors"
 	"LaoQGChat/internal/services"
-	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,8 +23,6 @@ func NewAuthController(service services.AuthService) AuthController {
 }
 
 func (c *authController) Login(ctx *gin.Context) {
-	fmt.Println("Calling controller Login")
-	defer fmt.Println("Returning controller Login")
 	inDto := models.AuthDto{}
 	err := ctx.Bind(&inDto)
 	if err != nil {

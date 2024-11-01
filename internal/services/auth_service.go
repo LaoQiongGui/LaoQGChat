@@ -4,7 +4,6 @@ import (
 	"LaoQGChat/api/models"
 	"LaoQGChat/internal/myerrors"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -58,8 +57,6 @@ func NewAuthService(db *sql.DB) AuthService {
 }
 
 func (service *authService) Login(ctx *gin.Context, inDto models.AuthDto) *models.AuthDto {
-	fmt.Println("Calling service Login")
-	defer fmt.Println("Returning service Login")
 	var (
 		err         error
 		password    string
@@ -90,8 +87,6 @@ func (service *authService) Login(ctx *gin.Context, inDto models.AuthDto) *model
 }
 
 func (service *authService) Check(loginToken uuid.UUID) (*models.AuthDto, error) {
-	fmt.Println("Calling service Check")
-	defer fmt.Println("Returning service Check")
 	var (
 		err           error
 		userName      string

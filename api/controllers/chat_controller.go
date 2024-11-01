@@ -4,7 +4,7 @@ import (
 	"LaoQGChat/api/models"
 	"LaoQGChat/internal/myerrors"
 	"LaoQGChat/internal/services"
-	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,8 +25,6 @@ func NewChatController(chatService services.ChatService) ChatController {
 }
 
 func (c chatController) StartChat(ctx *gin.Context) {
-	fmt.Println("Calling controller StartChat")
-	defer fmt.Println("Returning controller StartChat")
 	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
@@ -43,8 +41,6 @@ func (c chatController) StartChat(ctx *gin.Context) {
 }
 
 func (c chatController) Chat(ctx *gin.Context) {
-	fmt.Println("Calling controller Chat")
-	defer fmt.Println("Returning controller Chat")
 	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
@@ -61,8 +57,6 @@ func (c chatController) Chat(ctx *gin.Context) {
 }
 
 func (c chatController) EndChat(ctx *gin.Context) {
-	fmt.Println("Calling controller EndChat")
-	defer fmt.Println("Returning controller EndChat")
 	var inDto models.ChatInDto
 	err := ctx.Bind(&inDto)
 	if err != nil {
