@@ -1,14 +1,14 @@
 package middlewares
 
 import (
-	"LaoQGChat/api/models"
+	"LaoQGChat/api/models/auth"
 	"LaoQGChat/internal/myerrors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"net/http"
 )
 
-func AuthHandler(checkFunc func(loginToken uuid.UUID) (*models.AuthDto, error)) gin.HandlerFunc {
+func AuthHandler(checkFunc func(loginToken uuid.UUID) (*auth.Entity, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 前处理
 		// 认证除外
@@ -16,7 +16,7 @@ func AuthHandler(checkFunc func(loginToken uuid.UUID) (*models.AuthDto, error)) 
 			var (
 				err        error
 				loginToken uuid.UUID
-				authDto    *models.AuthDto
+				authDto    *auth.Entity
 			)
 
 			// 获取loginToken

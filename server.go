@@ -3,7 +3,8 @@ package main
 import (
 	"LaoQGChat/api/controllers"
 	"LaoQGChat/api/middlewares"
-	"LaoQGChat/internal/services"
+	"LaoQGChat/internal/services/auth"
+	"LaoQGChat/internal/services/chat"
 	"database/sql"
 	"fmt"
 	"time"
@@ -48,7 +49,7 @@ func main() {
 
 	// 初始化认证service
 	var (
-		authService    = services.NewAuthService(db)
+		authService    = auth.NewService(db)
 		authController = controllers.NewAuthController(authService)
 	)
 	if authService == nil || authController == nil {
@@ -61,7 +62,7 @@ func main() {
 
 	// 初始化业务service
 	var (
-		chatService    = services.NewChatService(db)
+		chatService    = chat.NewService(db)
 		chatController = controllers.NewChatController(chatService)
 	)
 	if chatService == nil || chatController == nil {
@@ -70,8 +71,6 @@ func main() {
 	}
 
 	server.POST("/Auth/Login", authController.Login)
-
-	server.POST("/Chat/StartChat", chatController.StartChat)
 
 	server.POST("/Chat/Chat", chatController.Chat)
 

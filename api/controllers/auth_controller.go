@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"LaoQGChat/api/models"
+	model "LaoQGChat/api/models/auth"
 	"LaoQGChat/internal/myerrors"
-	"LaoQGChat/internal/services"
+	service "LaoQGChat/internal/services/auth"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,17 +13,17 @@ type AuthController interface {
 }
 
 type authController struct {
-	service services.AuthService
+	service service.Service
 }
 
-func NewAuthController(service services.AuthService) AuthController {
+func NewAuthController(service service.Service) AuthController {
 	controller := new(authController)
 	controller.service = service
 	return controller
 }
 
 func (c *authController) Login(ctx *gin.Context) {
-	inDto := models.AuthDto{}
+	inDto := model.Entity{}
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		err = &myerrors.CustomError{

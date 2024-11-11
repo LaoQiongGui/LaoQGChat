@@ -1,7 +1,7 @@
-package services
+package auth
 
 import (
-	"LaoQGChat/api/models"
+	model "LaoQGChat/api/models/auth"
 	"LaoQGChat/internal/myerrors"
 	"database/sql"
 	"time"
@@ -11,9 +11,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type AuthService interface {
-	Login(ctx *gin.Context, inDto models.AuthDto) *models.AuthDto
-	Check(loginToken uuid.UUID) (*models.AuthDto, error)
+type Service interface {
+	Login(ctx *gin.Context, inDto model.Entity) *model.Entity
+	Check(loginToken uuid.UUID) (*model.Entity, error)
 }
 
 type authService struct {
@@ -22,7 +22,7 @@ type authService struct {
 	getLoginStatusByToken *sql.Stmt
 }
 
-func NewAuthService(db *sql.DB) AuthService {
+func NewService(db *sql.DB) Service {
 	var (
 		err                   error
 		getUserInfo           *sql.Stmt
@@ -56,7 +56,7 @@ func NewAuthService(db *sql.DB) AuthService {
 	return service
 }
 
-func (service *authService) Login(ctx *gin.Context, inDto models.AuthDto) *models.AuthDto {
+func (service *authService) Login(ctx *gin.Context, inDto model.Entity) *model.Entity {
 	var (
 		err         error
 		password    string
@@ -79,14 +79,14 @@ func (service *authService) Login(ctx *gin.Context, inDto models.AuthDto) *model
 		_ = ctx.Error(err)
 		return nil
 	}
-	outDto := &models.AuthDto{
+	outDto := &model.Entity{
 		LoginToken: loginToken,
 		Permission: permission,
 	}
 	return outDto
 }
 
-func (service *authService) Check(loginToken uuid.UUID) (*models.AuthDto, error) {
+func (service *authService) Check(loginToken uuid.UUID) (*model.Entity, error) {
 	var (
 		err           error
 		userName      string
@@ -123,7 +123,7 @@ func (service *authService) Check(loginToken uuid.UUID) (*models.AuthDto, error)
 		return nil, err
 	}
 
-	outDto := &models.AuthDto{
+	outDto := &model.Entity{
 		LoginToken: loginToken,
 		Permission: permission,
 	}

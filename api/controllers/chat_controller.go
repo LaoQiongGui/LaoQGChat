@@ -1,47 +1,30 @@
 package controllers
 
 import (
-	"LaoQGChat/api/models"
+	model "LaoQGChat/api/models/chat"
 	"LaoQGChat/internal/myerrors"
-	"LaoQGChat/internal/services"
+	service "LaoQGChat/internal/services/chat"
 
 	"github.com/gin-gonic/gin"
 )
 
 type ChatController interface {
-	StartChat(context *gin.Context)
 	Chat(context *gin.Context)
 	EndChat(context *gin.Context)
 }
 
 type chatController struct {
-	service services.ChatService
+	service service.Service
 }
 
-func NewChatController(chatService services.ChatService) ChatController {
+func NewChatController(chatService service.Service) ChatController {
 	return chatController{
 		service: chatService,
 	}
 }
 
-func (c chatController) StartChat(ctx *gin.Context) {
-	var inDto models.ChatInDto
-	err := ctx.Bind(&inDto)
-	if err != nil {
-		err = &myerrors.CustomError{
-			StatusCode:  200,
-			MessageCode: "E0000",
-			MessageText: "请求体格式错误。",
-		}
-		_ = ctx.Error(err)
-		return
-	}
-	outDto := c.service.StartChat(ctx, inDto)
-	ctx.Set("ResponseData", outDto)
-}
-
 func (c chatController) Chat(ctx *gin.Context) {
-	var inDto models.ChatInDto
+	var inDto model.Request
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		err = &myerrors.CustomError{
@@ -57,7 +40,7 @@ func (c chatController) Chat(ctx *gin.Context) {
 }
 
 func (c chatController) EndChat(ctx *gin.Context) {
-	var inDto models.ChatInDto
+	var inDto model.Request
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		err = &myerrors.CustomError{
