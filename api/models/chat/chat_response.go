@@ -6,6 +6,6 @@ import (
 
 type Response struct {
 	SessionId uuid.UUID `json:"sessionId"`
-	Answer    string    `json:"answer"`
-	Choices   []string  `json:"choices"`
+	Answer    Content   `json:"answer"`
+	Options   []Content `json:"options"`
 }

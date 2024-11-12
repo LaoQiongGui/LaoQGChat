@@ -26,12 +26,12 @@ func main() {
 
 	// 配置CORS中间件
 	config := cors.Config{
-		AllowAllOrigins:  true,                               // 允许所有的域名
-		AllowMethods:     []string{"POST"},                   // 允许的HTTP方法
-		AllowHeaders:     []string{"Origin", "Content-Type"}, // 允许的请求头
-		ExposeHeaders:    []string{"Content-Length"},         // 暴露的头信息
-		AllowCredentials: true,                               // 允许携带凭证
-		MaxAge:           12 * time.Hour,                     // 预检请求缓存时间
+		AllowAllOrigins:  true,                            // 允许所有的域名
+		AllowMethods:     []string{"POST"},                // 允许的HTTP方法
+		AllowHeaders:     []string{"Origin", "Part-Type"}, // 允许的请求头
+		ExposeHeaders:    []string{"Part-Length"},         // 暴露的头信息
+		AllowCredentials: true,                            // 允许携带凭证
+		MaxAge:           12 * time.Hour,                  // 预检请求缓存时间
 	}
 	server.Use(cors.New(config))
 

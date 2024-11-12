@@ -23,7 +23,7 @@ func newAzopenaiAPI() (*azopenaiAPI, error) {
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "ECH01",
+			MessageCode: "ECH0100",
 			MessageText: "Azure OpenAI认证失败，请联系管理员。",
 		}
 		return nil, err
@@ -35,7 +35,7 @@ func newAzopenaiAPI() (*azopenaiAPI, error) {
 	return &azopenaiAPI{client: *azopenaiClient, defaultModel: defaultModel}, nil
 }
 
-func (api *azopenaiAPI) chat(ctx *gin.Context, model string, contexts []chat.Context) (*chat.Response, error) {
+func (api *azopenaiAPI) chat(ctx *gin.Context, model string, contents []chat.Content) (*chat.Response, error) {
 	var (
 		azopenaiRequest  azopenai.ChatCompletionsOptions
 		azopenaiResponse azopenai.GetChatCompletionsResponse
@@ -50,7 +50,7 @@ func (api *azopenaiAPI) chat(ctx *gin.Context, model string, contexts []chat.Con
 	}
 
 	// 将request转为azopenai的输入
-	messages, err = toAzopenaiContexts(contexts)
+	messages, err = toAzopenaiContents(contents)
 	if err != nil {
 		return nil, err
 	}
@@ -66,79 +66,49 @@ func (api *azopenaiAPI) chat(ctx *gin.Context, model string, contexts []chat.Con
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "ECH02",
+			MessageCode: "ECH0101",
 			MessageText: "Azure OpenAI获取答案失败，请联系管理员。",
 		}
 		return nil, err
 	}
 
 	// 设置回答
-	answer := *azopenaiResponse.Choices[0].Message.Content
-	choices := make([]string, len(azopenaiResponse.Choices)-1)
-	for _, azopenaiChoice := range azopenaiResponse.Choices[1:] {
-		choices = append(choices, *azopenaiChoice.Message.Content)
+	answer := chat.Content{
+		Type: chat.ContentTypeAnswer,
+		Parts: []chat.PartWrapper{
+			{Part: &chat.TextPart{
+				Type: chat.PartTypeText,
+				Text: *azopenaiResponse.Choices[0].Message.Content,
+			}},
+		},
+	}
+
+	// 设置选项
+	options := make([]chat.Content, len(azopenaiResponse.Choices)-1)
+	for _, choice := range azopenaiResponse.Choices[1:] {
+		option := chat.Content{
+			Type: chat.ContentTypeOption,
+			Parts: []chat.PartWrapper{
+				{Part: &chat.TextPart{
+					Type: chat.PartTypeText,
+					Text: *choice.Message.Content,
+				}},
+			},
+		}
+		options = append(options, option)
 	}
 	response := &chat.Response{
 		Answer:  answer,
-		Choices: choices,
+		Options: options,
 	}
 
 	return response, nil
 }
 
-func toAzopenaiContexts(contexts []chat.Context) ([]azopenai.ChatRequestMessageClassification, error) {
-	azopenaiContexts := make([]azopenai.ChatRequestMessageClassification, len(contexts))
-	for _, context := range contexts {
-		azopenaiContext, err := toAzopenaiContext(&context)
-		if err != nil {
-			return nil, err
-		}
-		azopenaiContexts = append(azopenaiContexts, azopenaiContext)
-	}
-	return azopenaiContexts, nil
-}
-
-func toAzopenaiContext(context *chat.Context) (azopenai.ChatRequestMessageClassification, error) {
-	contents := make([]chat.Content, len(context.Contents))
-	for _, content := range context.Contents {
-		contents = append(contents, content.Content)
-	}
-	azopenaiContents, err := toAzopenaiContents(contents)
-	if err != nil {
-		return nil, err
-	}
-
-	switch context.Type {
-	case chat.ContextTypeQuestion:
-		return &azopenai.ChatRequestUserMessage{
-			Content: azopenai.NewChatRequestUserMessageContent(azopenaiContents),
-		}, nil
-	case chat.ContextTypeAnswer:
-		if content, ok := context.Contents[0].Content.(*chat.TextContent); ok {
-			return &azopenai.ChatRequestAssistantMessage{
-				Content: &content.Text,
-			}, nil
-		} else {
-			err = &myerrors.CustomError{
-				StatusCode:  200,
-				MessageCode: "ECH52",
-				MessageText: fmt.Sprintf("不支持的Content类型：%s。", (context.Contents[0].Content).GetContentType()),
-			}
-			return nil, err
-		}
-	}
-	err = &myerrors.CustomError{
-		StatusCode:  200,
-		MessageCode: "ECH51",
-		MessageText: fmt.Sprintf("不支持的Context类型：%s。", context.Type),
-	}
-	return nil, nil
-}
-
-func toAzopenaiContents(contents []chat.Content) ([]azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
-	azopenaiContents := make([]azopenai.ChatCompletionRequestMessageContentPartClassification, len(contents))
+func toAzopenaiContents(contents []chat.Content) ([]azopenai.ChatRequestMessageClassification, error) {
+	azopenaiContents := make([]azopenai.ChatRequestMessageClassification, len(contents))
 	for _, content := range contents {
-		azopenaiContent, err := toAzopenaiContent(&content)
+		azopenaiContent, err := toAzopenaiContent(content)
 		if err != nil {
 			return nil, err
 		}
@@ -147,27 +117,76 @@ func toAzopenaiContents(contents []chat.Content) ([]azopenai.ChatCompletionReque
 	return azopenaiContents, nil
 }
 
-func toAzopenaiContent(content *chat.Content) (azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
-	switch (*content).(type) {
-	case *chat.TextContent:
-		textContent := (*content).(*chat.TextContent)
-		azopenaiContent := &azopenai.ChatCompletionRequestMessageContentPartText{
-			Text: &textContent.Text,
+func toAzopenaiContent(content chat.Content) (azopenai.ChatRequestMessageClassification, error) {
+	parts := make([]chat.Part, len(content.Parts))
+	for _, part := range content.Parts {
+		parts = append(parts, part.Part)
+	}
+	azopenaiParts, err := toAzopenaiParts(parts)
+	if err != nil {
+		return nil, err
+	}
+
+	switch content.Type {
+	case chat.ContentTypeQuestion:
+		return &azopenai.ChatRequestUserMessage{
+			Content: azopenai.NewChatRequestUserMessageContent(azopenaiParts),
+		}, nil
+	case chat.ContentTypeAnswer:
+		if part, ok := content.Parts[0].Part.(*chat.TextPart); ok {
+			return &azopenai.ChatRequestAssistantMessage{
+				Content: &part.Text,
+			}, nil
+		} else {
+			err = &myerrors.CustomError{
+				StatusCode:  200,
+				MessageCode: "ECH0151",
+				MessageText: fmt.Sprintf("不支持的Part类型：%s。", part.GetContentType()),
+			}
+			return nil, err
 		}
-		return azopenaiContent, nil
-	case *chat.ImageContent:
-		imageContent := (*content).(*chat.ImageContent)
-		azopenaiContent := &azopenai.ChatCompletionRequestMessageContentPartImage{
+	}
+	err = &myerrors.CustomError{
+		StatusCode:  200,
+		MessageCode: "ECH0150",
+		MessageText: fmt.Sprintf("不支持的Content类型：%s。", content.Type),
+	}
+	return nil, nil
+}
+
+func toAzopenaiParts(parts []chat.Part) ([]azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
+	azopenaiParts := make([]azopenai.ChatCompletionRequestMessageContentPartClassification, len(parts))
+	for _, part := range parts {
+		azopenaiPart, err := toAzopenaiPart(part)
+		if err != nil {
+			return nil, err
+		}
+		azopenaiParts = append(azopenaiParts, azopenaiPart)
+	}
+	return azopenaiParts, nil
+}
+
+func toAzopenaiPart(part chat.Part) (azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
+	switch part.(type) {
+	case *chat.TextPart:
+		textPart := part.(*chat.TextPart)
+		azopenaiPart := &azopenai.ChatCompletionRequestMessageContentPartText{
+			Text: &textPart.Text,
+		}
+		return azopenaiPart, nil
+	case *chat.ImagePart:
+		imagePart := part.(*chat.ImagePart)
+		azopenaiPart := &azopenai.ChatCompletionRequestMessageContentPartImage{
 			ImageURL: &azopenai.ChatCompletionRequestMessageContentPartImageURL{
-				URL: &imageContent.ImageUrl,
+				URL: &imagePart.ImageUrl,
 			},
 		}
-		return azopenaiContent, nil
+		return azopenaiPart, nil
 	}
-	err := myerrors.CustomError{
+	err := &myerrors.CustomError{
 		StatusCode:  200,
-		MessageCode: "ECH52",
-		MessageText: fmt.Sprintf("不支持的Content类型：%s。", (*content).GetContentType()),
+		MessageCode: "ECH0151",
+		MessageText: fmt.Sprintf("不支持的Part类型：%s。", part.GetContentType()),
 	}
-	return nil, &err
+	return nil, err
 }

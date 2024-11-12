@@ -11,7 +11,7 @@ func newOpenAIAPI() (*openaiAPI, error) {
 	return &openaiAPI{}, nil
 }
 
-func (api *openaiAPI) chat(ctx *gin.Context, model string, contexts []chat.Context) (*chat.Response, error) {
+func (api *openaiAPI) chat(ctx *gin.Context, model string, contents []chat.Content) (*chat.Response, error) {
 	response := &chat.Response{}
 	return response, nil
 }

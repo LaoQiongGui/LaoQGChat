@@ -21,15 +21,15 @@ func NewService() Service {
 
 func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.Response {
 	var (
-		sessionId    = request.SessionId
-		chatContexts []chat.Context
-		response     *chat.Response
-		err          error
+		sessionId   = request.SessionId
+		chatContext = make([]chat.Content, 0)
+		response    *chat.Response
+		err         error
 	)
 
 	if sessionId != uuid.Nil {
 		// 有sessionId则获取历史对话
-		chatContexts, err = service.getSessionContexts(ctx, sessionId)
+		chatContext, err = service.getSessionContext(ctx, sessionId)
 		if err != nil {
 			_ = ctx.Error(err)
 			return nil
@@ -39,8 +39,11 @@ func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.R
 		sessionId = uuid.New()
 	}
 
+	// 加入本次提问
+	chatContext = append(chatContext, request.Question)
+
 	// 调用外部API
-	response, err = service.callExternalChatAPI(ctx, request.Model, chatContexts)
+	response, err = service.callExternalChatAPI(ctx, request.Model, chatContext)
 	if err != nil {
 		_ = ctx.Error(err)
 		return nil
@@ -48,7 +51,7 @@ func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.R
 	response.SessionId = sessionId
 
 	// 保存上下文
-	err = service.saveContext(ctx, chatContexts)
+	err = service.saveSessionContext(ctx, chatContext)
 	if err != nil {
 		_ = ctx.Error(err)
 		return nil
@@ -62,13 +65,13 @@ func (service *chatService) EndChat(ctx *gin.Context, request chat.Request) *cha
 	return &chat.Response{}
 }
 
-func (service *chatService) getSessionContexts(ctx *gin.Context, sessionId uuid.UUID) ([]chat.Context, error) {
+func (service *chatService) getSessionContext(ctx *gin.Context, sessionId uuid.UUID) ([]chat.Content, error) {
 	// TODO
-	chatContexts := make([]chat.Context, 0)
-	return chatContexts, nil
+	chatContext := make([]chat.Content, 0)
+	return chatContext, nil
 }
 
-func (service *chatService) callExternalChatAPI(ctx *gin.Context, model string, chatContexts []chat.Context) (*chat.Response, error) {
+func (service *chatService) callExternalChatAPI(ctx *gin.Context, model string, chatContexts []chat.Content) (*chat.Response, error) {
 	externalAPI, err := getExternalAPI(model)
 	if err != nil {
 		return nil, err
@@ -76,7 +79,7 @@ func (service *chatService) callExternalChatAPI(ctx *gin.Context, model string, 
 	return externalAPI.chat(ctx, model, chatContexts)
 }
 
-func (service *chatService) saveContext(ctx *gin.Context, chatContexts []chat.Context) error {
+func (service *chatService) saveSessionContext(ctx *gin.Context, chatContents []chat.Content) error {
 	// TODO
 	return nil
 }

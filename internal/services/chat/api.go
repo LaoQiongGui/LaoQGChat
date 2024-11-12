@@ -8,7 +8,7 @@ import (
 )
 
 type externalAPI interface {
-	chat(ctx *gin.Context, model string, contexts []chat.Context) (*chat.Response, error)
+	chat(ctx *gin.Context, model string, contexts []chat.Content) (*chat.Response, error)
 }
 
 func getExternalAPI(model string) (externalAPI, error) {
