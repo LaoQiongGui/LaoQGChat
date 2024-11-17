@@ -2,8 +2,10 @@ package auth
 
 import (
 	model "LaoQGChat/api/models/auth"
+	"LaoQGChat/internal/dao"
 	"LaoQGChat/internal/myerrors"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,120 +14,119 @@ import (
 )
 
 type Service interface {
-	Login(ctx *gin.Context, inDto model.Entity) *model.Entity
-	Check(loginToken uuid.UUID) (*model.Entity, error)
+	Login(ctx *gin.Context, inDto model.UserInfo) *model.UserInfo
+	Check(loginToken uuid.UUID) (*model.UserInfo, error)
 }
 
 type authService struct {
-	getUserInfo           *sql.Stmt
-	updateLoginStatus     *sql.Stmt
-	getLoginStatusByToken *sql.Stmt
+	authDao dao.AuthDao
 }
 
 func NewService(db *sql.DB) Service {
-	var (
-		err                   error
-		getUserInfo           *sql.Stmt
-		updateLoginStatus     *sql.Stmt
-		getLoginStatusByToken *sql.Stmt
-	)
-	getUserInfo, err = db.Prepare(
-		"SELECT password, permission FROM account WHERE user_name = $1")
+	authDao, err := dao.NewAuthDao(db)
 	if err != nil {
 		return nil
 	}
-	updateLoginStatus, err = db.Prepare(`
-		INSERT INTO login_record (user_name, last_login_time, login_token)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (user_name)
-		DO UPDATE SET
-		    last_login_time = $2, login_token = $3`)
-	if err != nil {
-		return nil
-	}
-	getLoginStatusByToken, err = db.Prepare(
-		"SELECT user_name, last_login_time FROM login_record WHERE login_token = $1")
-	if err != nil {
-		return nil
-	}
-	service := &authService{
-		getUserInfo:           getUserInfo,
-		updateLoginStatus:     updateLoginStatus,
-		getLoginStatusByToken: getLoginStatusByToken,
-	}
+	service := &authService{authDao: authDao}
 	return service
 }
 
-func (service *authService) Login(ctx *gin.Context, inDto model.Entity) *model.Entity {
+func (service *authService) Login(ctx *gin.Context, inDto model.UserInfo) *model.UserInfo {
 	var (
-		err         error
-		password    string
 		permission  string
 		currentTime = time.Now()
 		loginToken  = uuid.New()
+		userInfo    *model.UserInfo
+		loginStatus *model.LoginStatus
+		err         error
 	)
-	err = service.getUserInfo.QueryRow(inDto.Username).Scan(&password, &permission)
-	if err != nil || password != inDto.Password {
+	// 验证账号密码
+	userInfo, err = service.authDao.GetUserInfoByUserName(inDto.Username)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = &myerrors.CustomError{
+				StatusCode:  200,
+				MessageCode: "EAU0000",
+				MessageText: "账号或密码错误。",
+			}
+		}
+		_ = ctx.Error(err)
+		return nil
+	}
+	if userInfo.Password != inDto.Password {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "EAU00",
+			MessageCode: "EAU0000",
 			MessageText: "账号或密码错误。",
 		}
 		_ = ctx.Error(err)
 		return nil
 	}
-	_, err = service.updateLoginStatus.Exec(inDto.Username, currentTime, loginToken)
+
+	// 更新登录凭证
+	loginStatus = &model.LoginStatus{
+		UserName:      inDto.Username,
+		LastLoginTime: currentTime,
+		LoginToken:    loginToken,
+	}
+	err = service.authDao.UpdateLoginStatus(*loginStatus)
 	if err != nil {
 		_ = ctx.Error(err)
 		return nil
 	}
-	outDto := &model.Entity{
+
+	// 返回登录凭证与账号权限
+	outDto := &model.UserInfo{
 		LoginToken: loginToken,
 		Permission: permission,
 	}
 	return outDto
 }
 
-func (service *authService) Check(loginToken uuid.UUID) (*model.Entity, error) {
+func (service *authService) Check(loginToken uuid.UUID) (*model.UserInfo, error) {
 	var (
-		err           error
-		userName      string
-		password      string
-		permission    string
-		currentTime   = time.Now()
-		lastLoginTime time.Time
+		currentTime = time.Now()
+		userInfo    *model.UserInfo
+		loginStatus *model.LoginStatus
+		err         error
 	)
-	// 用户存在check
-	err = service.getLoginStatusByToken.QueryRow(loginToken).Scan(&userName, &lastLoginTime)
+
+	// 登录状态检测
+	loginStatus, err = service.authDao.GetLoginStatusByToken(loginToken.String())
 	if err != nil {
-		err = &myerrors.CustomError{
-			StatusCode:  200,
-			MessageCode: "EAU01",
-			MessageText: "用户未登录。",
+		if errors.Is(err, sql.ErrNoRows) {
+			err = &myerrors.CustomError{
+				StatusCode:  200,
+				MessageCode: "EAU0001",
+				MessageText: "用户未登录。",
+			}
 		}
 		return nil, err
 	}
-	if currentTime.Sub(lastLoginTime).Hours() >= 24 {
+
+	// 登陆时间检测
+	if currentTime.Sub(loginStatus.LastLoginTime).Hours() > 24 {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "EAU02",
+			MessageCode: "EAU0002",
 			MessageText: "登录已超时，请重新登录。",
 		}
 		return nil, err
 	}
-	err = service.getUserInfo.QueryRow(userName).Scan(&password, &permission)
+
+	userInfo, err = service.authDao.GetUserInfoByUserName(loginStatus.UserName)
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "EAU03",
+			MessageCode: "EAU0003",
 			MessageText: "用户已注销。",
 		}
 		return nil, err
 	}
 
-	outDto := &model.Entity{
+	outDto := &model.UserInfo{
 		LoginToken: loginToken,
-		Permission: permission,
+		Permission: userInfo.Permission,
 	}
 	return outDto, nil
 }

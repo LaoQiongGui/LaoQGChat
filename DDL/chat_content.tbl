@@ -1,0 +1,17 @@
+-- Table: public.chat_content
+
+-- DROP TABLE IF EXISTS public.chat_content;
+
+CREATE TABLE IF NOT EXISTS public.chat_content
+(
+    session_id text COLLATE pg_catalog."default" NOT NULL,
+    serial_number bigint NOT NULL,
+    content jsonb,
+    delete_flag boolean NOT NULL DEFAULT false,
+    CONSTRAINT chat_content_pkey PRIMARY KEY (session_id, serial_number)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.chat_content
+    OWNER to laoqionggui;

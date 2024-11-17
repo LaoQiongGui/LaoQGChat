@@ -38,9 +38,6 @@ func main() {
 	// 配置异常处理中间件
 	server.Use(middlewares.ErrorHandler())
 
-	// 配置并发控制中间件
-	// server.Use(middlewares.ConcurrentControlHandler(5, 10))
-
 	// 配置版本检测中间件
 	server.Use(middlewares.VersionHandler("1.2.0"))
 

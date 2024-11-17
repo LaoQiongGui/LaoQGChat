@@ -23,12 +23,12 @@ func NewAuthController(service service.Service) AuthController {
 }
 
 func (c *authController) Login(ctx *gin.Context) {
-	inDto := model.Entity{}
+	inDto := model.UserInfo{}
 	err := ctx.Bind(&inDto)
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "E0000",
+			MessageCode: "E000000",
 			MessageText: "请求体格式错误。",
 		}
 		_ = ctx.Error(err)

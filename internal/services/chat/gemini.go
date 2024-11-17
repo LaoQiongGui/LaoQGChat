@@ -140,7 +140,7 @@ func toGeminiContent(content chat.Content) (*genai.Content, error) {
 	case chat.ContentTypeAnswer:
 		return &genai.Content{
 			Parts: geminiParts,
-			Role:  "model",
+			Role:  "models",
 		}, nil
 	}
 
@@ -198,7 +198,7 @@ func toContent[T *genai.Content](geminiContent T) (*chat.Content, error) {
 		switch geminiContent.Role {
 		case "user":
 			contentType = chat.ContentTypeQuestion
-		case "model":
+		case "models":
 			contentType = chat.ContentTypeAnswer
 		}
 		if contentType == "" {

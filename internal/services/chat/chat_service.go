@@ -2,6 +2,9 @@ package chat
 
 import (
 	"LaoQGChat/api/models/chat"
+	"LaoQGChat/internal/dao"
+	"LaoQGChat/internal/myerrors"
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
@@ -12,24 +15,30 @@ type Service interface {
 	EndChat(ctx *gin.Context, request chat.Request) *chat.Response
 }
 
-type chatService struct{}
+type chatService struct {
+	chatDao dao.ChatDao
+}
 
-func NewService() Service {
-	service := &chatService{}
+func NewService(db *sql.DB) Service {
+	chatDao, err := dao.NewChatDao(db)
+	if err != nil {
+		return nil
+	}
+	service := &chatService{chatDao: chatDao}
 	return service
 }
 
 func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.Response {
 	var (
-		sessionId   = request.SessionId
-		chatContext = make([]chat.Content, 0)
-		response    *chat.Response
-		err         error
+		sessionId = request.SessionId
+		contents  = make([]chat.Content, 0)
+		response  *chat.Response
+		err       error
 	)
 
 	if sessionId != uuid.Nil {
 		// 有sessionId则获取历史对话
-		chatContext, err = service.getSessionContext(ctx, sessionId)
+		contents, err = service.getSessionContents(ctx, sessionId)
 		if err != nil {
 			_ = ctx.Error(err)
 			return nil
@@ -39,19 +48,16 @@ func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.R
 		sessionId = uuid.New()
 	}
 
-	// 加入本次提问
-	chatContext = append(chatContext, request.Question)
-
 	// 调用外部API
-	response, err = service.callExternalChatAPI(ctx, request.Model, chatContext)
+	response, err = service.callExternalChatAPI(ctx, request.Model, contents)
 	if err != nil {
 		_ = ctx.Error(err)
 		return nil
 	}
 	response.SessionId = sessionId
 
-	// 保存上下文
-	err = service.saveSessionContext(ctx, chatContext)
+	// 保存本次对话
+	err = service.saveSessionContents(ctx, request.Question, response.Answer)
 	if err != nil {
 		_ = ctx.Error(err)
 		return nil
@@ -61,25 +67,85 @@ func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.R
 }
 
 func (service *chatService) EndChat(ctx *gin.Context, request chat.Request) *chat.Response {
-	// TODO
 	return &chat.Response{}
 }
 
-func (service *chatService) getSessionContext(ctx *gin.Context, sessionId uuid.UUID) ([]chat.Content, error) {
-	// TODO
-	chatContext := make([]chat.Content, 0)
-	return chatContext, nil
+func (service *chatService) getSessionContents(ctx *gin.Context, sessionId uuid.UUID) ([]chat.Content, error) {
+	var (
+		userName   string
+		permission string
+		contents   []chat.Content
+		ok         bool
+		err        error
+	)
+	value, exists := ctx.Get("UserName")
+	if !exists {
+		err = &myerrors.CustomError{
+			StatusCode:  200,
+			MessageCode: "ECH0000",
+			MessageText: "用户权限不足。",
+		}
+		return nil, err
+	}
+	userName = value.(string)
+
+	value, exists = ctx.Get("Permission")
+	if !exists {
+		err = &myerrors.CustomError{
+			StatusCode:  200,
+			MessageCode: "ECH0000",
+			MessageText: "用户权限不足。",
+		}
+		return nil, err
+	}
+	permission = value.(string)
+
+	// 根据用户权限检测会话
+	if permission == "super" {
+		// 超级用户检测当前会话是否存在
+		ok, err = service.chatDao.CheckSessionById(sessionId.String())
+		if err != nil {
+			return nil, err
+		} else if !ok {
+			err = &myerrors.CustomError{
+				StatusCode:  200,
+				MessageCode: "ECH0001",
+				MessageText: "当前会话不存在。",
+			}
+			return nil, err
+		}
+	} else {
+		// 普通用户检测当前会话是否处于自己的会话列表中
+		ok, err = service.chatDao.CheckUserSessionById(userName, sessionId.String())
+		if err != nil {
+			return nil, err
+		} else if !ok {
+			err = &myerrors.CustomError{
+				StatusCode:  200,
+				MessageCode: "ECH0000",
+				MessageText: "用户权限不足。",
+			}
+			return nil, err
+		}
+	}
+
+	// 获取会话内容
+	contents, err = service.chatDao.GetSessionContentsById(sessionId.String())
+	if err != nil {
+		return nil, err
+	}
+	return contents, nil
 }
 
-func (service *chatService) callExternalChatAPI(ctx *gin.Context, model string, chatContexts []chat.Content) (*chat.Response, error) {
+func (service *chatService) callExternalChatAPI(ctx *gin.Context, model string, contents []chat.Content) (*chat.Response, error) {
 	externalAPI, err := getExternalAPI(model)
 	if err != nil {
 		return nil, err
 	}
-	return externalAPI.chat(ctx, model, chatContexts)
+	return externalAPI.chat(ctx, model, contents)
 }
 
-func (service *chatService) saveSessionContext(ctx *gin.Context, chatContents []chat.Content) error {
+func (service *chatService) saveSessionContents(ctx *gin.Context, question chat.Content, answer chat.Content) error {
 	// TODO
 	return nil
 }

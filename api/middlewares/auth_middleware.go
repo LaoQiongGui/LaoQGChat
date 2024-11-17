@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func AuthHandler(checkFunc func(loginToken uuid.UUID) (*auth.Entity, error)) gin.HandlerFunc {
+func AuthHandler(checkFunc func(loginToken uuid.UUID) (*auth.UserInfo, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 前处理
 		// 认证除外
@@ -16,7 +16,7 @@ func AuthHandler(checkFunc func(loginToken uuid.UUID) (*auth.Entity, error)) gin
 			var (
 				err        error
 				loginToken uuid.UUID
-				authDto    *auth.Entity
+				authDto    *auth.UserInfo
 			)
 
 			// 获取loginToken

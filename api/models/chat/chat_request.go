@@ -6,6 +6,6 @@ import (
 
 type Request struct {
 	SessionId uuid.UUID `json:"sessionId"`
-	Model     string    `json:"model"`
+	Model     string    `json:"models"`
 	Question  Content   `json:"question"`
 }

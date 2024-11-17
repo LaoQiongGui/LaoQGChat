@@ -1,0 +1,16 @@
+-- Table: public.chat_session
+
+-- DROP TABLE IF EXISTS public.chat_session;
+
+CREATE TABLE IF NOT EXISTS public.chat_session
+(
+    session_id text COLLATE pg_catalog."default" NOT NULL,
+    user_id text COLLATE pg_catalog."default" NOT NULL,
+    delete_flag boolean NOT NULL DEFAULT false,
+    CONSTRAINT chat_session_pkey PRIMARY KEY (session_id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.chat_session
+    OWNER to laoqionggui;

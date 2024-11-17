@@ -28,11 +28,6 @@ func getExternalAPI(model string) (externalAPI, error) {
 			return nil, err
 		}
 		return api, nil
-	case "openaiAPI":
-		if api, err = newOpenAIAPI(); err != nil {
-			return nil, err
-		}
-		return api, nil
 	}
 	err = &myerrors.CustomError{
 		StatusCode:  200,

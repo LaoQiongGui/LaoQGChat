@@ -18,9 +18,7 @@ type chatController struct {
 }
 
 func NewChatController(chatService service.Service) ChatController {
-	return chatController{
-		service: chatService,
-	}
+	return chatController{service: chatService}
 }
 
 func (c chatController) Chat(ctx *gin.Context) {
@@ -29,7 +27,7 @@ func (c chatController) Chat(ctx *gin.Context) {
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "E0000",
+			MessageCode: "E000000",
 			MessageText: "请求体格式错误。",
 		}
 		_ = ctx.Error(err)
@@ -45,7 +43,7 @@ func (c chatController) EndChat(ctx *gin.Context) {
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
-			MessageCode: "E0000",
+			MessageCode: "E000000",
 			MessageText: "请求体格式错误。",
 		}
 		_ = ctx.Error(err)
