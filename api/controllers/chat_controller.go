@@ -22,8 +22,8 @@ func NewChatController(chatService service.Service) ChatController {
 }
 
 func (c chatController) Chat(ctx *gin.Context) {
-	var inDto model.Request
-	err := ctx.Bind(&inDto)
+	var request model.Request
+	err := ctx.Bind(&request)
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
@@ -33,13 +33,13 @@ func (c chatController) Chat(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	outDto := c.service.Chat(ctx, inDto)
+	outDto := c.service.Chat(ctx, request)
 	ctx.Set("ResponseData", outDto)
 }
 
 func (c chatController) EndChat(ctx *gin.Context) {
-	var inDto model.Request
-	err := ctx.Bind(&inDto)
+	var request model.Request
+	err := ctx.Bind(&request)
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
@@ -49,6 +49,6 @@ func (c chatController) EndChat(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	outDto := c.service.EndChat(ctx, inDto)
+	outDto := c.service.EndChat(ctx, request)
 	ctx.Set("ResponseData", outDto)
 }

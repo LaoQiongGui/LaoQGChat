@@ -5,7 +5,7 @@ import (
 )
 
 type Response struct {
-	SessionId uuid.UUID `json:"sessionId"`
-	Answer    Content   `json:"answer"`
-	Options   []Content `json:"options"`
+	SessionId uuid.UUID       `json:"sessionId"`
+	Answer    []PartWrapper   `json:"answer"`
+	Options   [][]PartWrapper `json:"options"`
 }

@@ -5,7 +5,7 @@ import (
 )
 
 type Request struct {
-	SessionId uuid.UUID `json:"sessionId"`
-	Model     string    `json:"models"`
-	Question  Content   `json:"question"`
+	SessionId *uuid.UUID    `json:"sessionId"`
+	Model     string        `json:"models"`
+	Question  []PartWrapper `json:"question"`
 }

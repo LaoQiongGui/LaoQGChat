@@ -65,7 +65,7 @@ func (api *geminiAPI) chat(ctx *gin.Context, modelStr string, contents []chat.Co
 	}
 
 	// 将请求转为gemini请求
-	parts := make([]chat.Part, len(contents))
+	parts := make([]chat.Part, 0)
 	for _, part := range contents[len(contents)-1].Parts {
 		parts = append(parts, part.Part)
 	}
@@ -81,28 +81,27 @@ func (api *geminiAPI) chat(ctx *gin.Context, modelStr string, contents []chat.Co
 	}
 
 	var (
-		answer  *chat.Content
-		options = make([]chat.Content, len(geminiResponses.Candidates)-1)
+		answer  []chat.PartWrapper
+		options = make([][]chat.PartWrapper, 0)
 	)
 
 	// 设置回答
-	answer, err = toContent(geminiResponses.Candidates[0].Content)
+	answer, err = toPartWrappers(geminiResponses.Candidates[0].Content.Parts)
 	if err != nil {
 		return nil, err
 	}
 
 	// 设置选项
 	for _, candidate := range geminiResponses.Candidates[1:] {
-		var responseOption *chat.Content
-		responseOption, err = toContent(candidate.Content)
+		var responseOption []chat.PartWrapper
+		responseOption, err = toPartWrappers(candidate.Content.Parts)
 		if err != nil {
 			return nil, err
 		}
-		responseOption.Type = chat.ContentTypeOption
-		options = append(options, *responseOption)
+		options = append(options, responseOption)
 	}
 	response := &chat.Response{
-		Answer:  *answer,
+		Answer:  answer,
 		Options: options,
 	}
 
@@ -110,7 +109,7 @@ func (api *geminiAPI) chat(ctx *gin.Context, modelStr string, contents []chat.Co
 }
 
 func toGeminiContents(contents []chat.Content) ([]*genai.Content, error) {
-	geminiContents := make([]*genai.Content, len(contents))
+	geminiContents := make([]*genai.Content, 0)
 	for _, content := range contents {
 		geminiContent, err := toGeminiContent(content)
 		if err != nil {
@@ -122,7 +121,7 @@ func toGeminiContents(contents []chat.Content) ([]*genai.Content, error) {
 }
 
 func toGeminiContent(content chat.Content) (*genai.Content, error) {
-	parts := make([]chat.Part, len(content.Parts))
+	parts := make([]chat.Part, 0)
 	for _, part := range content.Parts {
 		parts = append(parts, part.Part)
 	}
@@ -153,7 +152,7 @@ func toGeminiContent(content chat.Content) (*genai.Content, error) {
 }
 
 func toGeminiParts(parts []chat.Part) ([]genai.Part, error) {
-	geminiParts := make([]genai.Part, len(parts))
+	geminiParts := make([]genai.Part, 0)
 	for _, part := range parts {
 		geminiPart, err := toGeminiPart(part)
 		if err != nil {
@@ -192,38 +191,18 @@ func toGeminiPart(part chat.Part) (genai.Part, error) {
 	return nil, err
 }
 
-func toContent[T *genai.Content](geminiContent T) (*chat.Content, error) {
-	return func(geminiContent *genai.Content) (*chat.Content, error) {
-		contentType := ""
-		switch geminiContent.Role {
-		case "user":
-			contentType = chat.ContentTypeQuestion
-		case "models":
-			contentType = chat.ContentTypeAnswer
-		}
-		if contentType == "" {
-			err := &myerrors.CustomError{
-				StatusCode:  200,
-				MessageCode: "ECH0253",
-				MessageText: fmt.Sprintf("不支持的GeminiContent类型：%s。", geminiContent.Role),
-			}
-			return nil, err
-		}
-
-		parts := make([]chat.PartWrapper, len(geminiContent.Parts))
-		for _, geminiPart := range geminiContent.Parts {
+func toPartWrappers[T []genai.Part](geminiParts T) ([]chat.PartWrapper, error) {
+	return func(geminiParts []genai.Part) ([]chat.PartWrapper, error) {
+		parts := make([]chat.PartWrapper, 0)
+		for _, geminiPart := range geminiParts {
 			part, err := toPart(geminiPart)
 			if err != nil {
 				return nil, err
 			}
 			parts = append(parts, chat.PartWrapper{Part: part})
 		}
-		content := &chat.Content{
-			Type:  contentType,
-			Parts: parts,
-		}
-		return content, nil
-	}(geminiContent)
+		return parts, nil
+	}(geminiParts)
 }
 
 func toPart[T genai.Part](geminiPart T) (chat.Part, error) {

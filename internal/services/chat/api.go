@@ -18,12 +18,12 @@ func getExternalAPI(model string) (externalAPI, error) {
 	)
 
 	switch getModelName(model) {
-	case "azopenaiAPI":
+	case "azopenai":
 		if api, err = newAzopenaiAPI(); err != nil {
 			return nil, err
 		}
 		return api, nil
-	case "geminiAPI":
+	case "gemini":
 		if api, err = newGeminiAPI(); err != nil {
 			return nil, err
 		}

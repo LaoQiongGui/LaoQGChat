@@ -30,13 +30,15 @@ func NewService(db *sql.DB) Service {
 
 func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.Response {
 	var (
-		sessionId = request.SessionId
+		sessionId uuid.UUID
 		contents  = make([]chat.Content, 0)
 		response  *chat.Response
 		err       error
 	)
 
-	if sessionId != uuid.Nil {
+	if request.SessionId != nil {
+		sessionId = *request.SessionId
+
 		// 有sessionId则获取历史对话
 		contents, err = service.getSessionContents(ctx, sessionId)
 		if err != nil {
@@ -48,6 +50,13 @@ func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.R
 		sessionId = uuid.New()
 	}
 
+	// 加入本次提问
+	questionContent := chat.Content{
+		Type:  chat.ContentTypeQuestion,
+		Parts: request.Question,
+	}
+	contents = append(contents, questionContent)
+
 	// 调用外部API
 	response, err = service.callExternalChatAPI(ctx, request.Model, contents)
 	if err != nil {
@@ -55,9 +64,16 @@ func (service *chatService) Chat(ctx *gin.Context, request chat.Request) *chat.R
 		return nil
 	}
 	response.SessionId = sessionId
+	answerContent := chat.Content{
+		Type:  chat.ContentTypeAnswer,
+		Parts: response.Answer,
+	}
 
 	// 保存本次对话
-	err = service.saveSessionContents(ctx, request.Question, response.Answer)
+	err = service.saveSessionContents(ctx, sessionId, []chat.Content{
+		questionContent,
+		answerContent,
+	})
 	if err != nil {
 		_ = ctx.Error(err)
 		return nil
@@ -138,14 +154,14 @@ func (service *chatService) getSessionContents(ctx *gin.Context, sessionId uuid.
 }
 
 func (service *chatService) callExternalChatAPI(ctx *gin.Context, model string, contents []chat.Content) (*chat.Response, error) {
-	externalAPI, err := getExternalAPI(model)
+	api, err := getExternalAPI(model)
 	if err != nil {
 		return nil, err
 	}
-	return externalAPI.chat(ctx, model, contents)
+	return api.chat(ctx, model, contents)
 }
 
-func (service *chatService) saveSessionContents(ctx *gin.Context, question chat.Content, answer chat.Content) error {
-	// TODO
-	return nil
+func (service *chatService) saveSessionContents(ctx *gin.Context, sessionId uuid.UUID, contents []chat.Content) error {
+	err := service.chatDao.InsertSessionContents(sessionId.String(), contents)
+	return err
 }

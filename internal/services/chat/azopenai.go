@@ -73,27 +73,21 @@ func (api *azopenaiAPI) chat(ctx *gin.Context, model string, contents []chat.Con
 	}
 
 	// 设置回答
-	answer := chat.Content{
-		Type: chat.ContentTypeAnswer,
-		Parts: []chat.PartWrapper{
-			{Part: &chat.TextPart{
-				Type: chat.PartTypeText,
-				Text: *azopenaiResponse.Choices[0].Message.Content,
-			}},
-		},
+	answer := []chat.PartWrapper{
+		{Part: &chat.TextPart{
+			Type: chat.PartTypeText,
+			Text: *azopenaiResponse.Choices[0].Message.Content,
+		}},
 	}
 
 	// 设置选项
-	options := make([]chat.Content, len(azopenaiResponse.Choices)-1)
+	options := make([][]chat.PartWrapper, 0)
 	for _, choice := range azopenaiResponse.Choices[1:] {
-		option := chat.Content{
-			Type: chat.ContentTypeOption,
-			Parts: []chat.PartWrapper{
-				{Part: &chat.TextPart{
-					Type: chat.PartTypeText,
-					Text: *choice.Message.Content,
-				}},
-			},
+		option := []chat.PartWrapper{
+			{Part: &chat.TextPart{
+				Type: chat.PartTypeText,
+				Text: *choice.Message.Content,
+			}},
 		}
 		options = append(options, option)
 	}
@@ -106,7 +100,7 @@ func (api *azopenaiAPI) chat(ctx *gin.Context, model string, contents []chat.Con
 }
 
 func toAzopenaiContents(contents []chat.Content) ([]azopenai.ChatRequestMessageClassification, error) {
-	azopenaiContents := make([]azopenai.ChatRequestMessageClassification, len(contents))
+	azopenaiContents := make([]azopenai.ChatRequestMessageClassification, 0)
 	for _, content := range contents {
 		azopenaiContent, err := toAzopenaiContent(content)
 		if err != nil {
@@ -118,7 +112,7 @@ func toAzopenaiContents(contents []chat.Content) ([]azopenai.ChatRequestMessageC
 }
 
 func toAzopenaiContent(content chat.Content) (azopenai.ChatRequestMessageClassification, error) {
-	parts := make([]chat.Part, len(content.Parts))
+	parts := make([]chat.Part, 0)
 	for _, part := range content.Parts {
 		parts = append(parts, part.Part)
 	}
@@ -155,7 +149,7 @@ func toAzopenaiContent(content chat.Content) (azopenai.ChatRequestMessageClassif
 }
 
 func toAzopenaiParts(parts []chat.Part) ([]azopenai.ChatCompletionRequestMessageContentPartClassification, error) {
-	azopenaiParts := make([]azopenai.ChatCompletionRequestMessageContentPartClassification, len(parts))
+	azopenaiParts := make([]azopenai.ChatCompletionRequestMessageContentPartClassification, 0)
 	for _, part := range parts {
 		azopenaiPart, err := toAzopenaiPart(part)
 		if err != nil {
