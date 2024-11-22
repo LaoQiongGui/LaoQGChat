@@ -4,6 +4,7 @@ import (
 	"LaoQGChat/api/models/chat"
 	"LaoQGChat/internal/myerrors"
 	"LaoQGChat/internal/shared"
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/generative-ai-go/genai"
@@ -13,31 +14,19 @@ import (
 )
 
 type geminiAPI struct {
-	apiKey       string
 	defaultModel string
+	client       *genai.Client
 }
 
 func newGeminiAPI() (*geminiAPI, error) {
-	// 设置API KEY
-	apiKey := os.Getenv("GEMINI_API_KEY")
-
 	// 设置默认模型
 	defaultModel := os.Getenv("GEMINI_MODEL")
-	return &geminiAPI{apiKey: apiKey, defaultModel: defaultModel}, nil
-}
 
-func (api *geminiAPI) chat(ctx *gin.Context, modelStr string, contents []chat.Content) (*chat.Response, error) {
-	var (
-		client          *genai.Client
-		model           *genai.GenerativeModel
-		chatSession     *genai.ChatSession
-		geminiRequests  []genai.Part
-		geminiResponses *genai.GenerateContentResponse
-		err             error
-	)
+	// 获取API KEY
+	apiKey := os.Getenv("GEMINI_API_KEY")
 
-	// 创建gemini客户端
-	client, err = genai.NewClient(ctx.Request.Context(), option.WithAPIKey(api.apiKey))
+	// 设置客户端
+	client, err := genai.NewClient(context.Background(), option.WithAPIKey(apiKey))
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
@@ -46,16 +35,24 @@ func (api *geminiAPI) chat(ctx *gin.Context, modelStr string, contents []chat.Co
 		}
 		return nil, err
 	}
-	defer func(client *genai.Client) {
-		_ = client.Close()
-	}(client)
+	return &geminiAPI{defaultModel: defaultModel, client: client}, nil
+}
+
+func (api *geminiAPI) chat(ctx *gin.Context, modelStr string, contents []chat.Content) (*chat.Response, error) {
+	var (
+		model           *genai.GenerativeModel
+		chatSession     *genai.ChatSession
+		geminiRequests  []genai.Part
+		geminiResponses *genai.GenerateContentResponse
+		err             error
+	)
 
 	// 设置模型
 	modelName := getModelId(modelStr)
 	if modelName == "" {
 		modelName = api.defaultModel
 	}
-	model = client.GenerativeModel(modelName)
+	model = api.client.GenerativeModel(modelName)
 
 	// 将历史记录转为gemini历史记录
 	chatSession = model.StartChat()
@@ -208,11 +205,11 @@ func toPartWrappers[T []genai.Part](geminiParts T) ([]chat.PartWrapper, error) {
 func toPart[T genai.Part](geminiPart T) (chat.Part, error) {
 	return func(geminiPart genai.Part) (chat.Part, error) {
 		switch geminiPart.(type) {
-		case *genai.Text:
-			textPart := geminiPart.(*genai.Text)
+		case genai.Text:
+			textPart := geminiPart.(genai.Text)
 			part := chat.TextPart{
 				Type: chat.PartTypeText,
-				Text: string(*textPart),
+				Text: string(textPart),
 			}
 			return &part, nil
 		}
