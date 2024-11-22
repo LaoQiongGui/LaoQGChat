@@ -4,23 +4,24 @@ import (
 	model "LaoQGChat/api/models/chat"
 	"LaoQGChat/internal/myerrors"
 	service "LaoQGChat/internal/services/chat"
+
 	"github.com/gin-gonic/gin"
 )
 
 type ChatController interface {
-	Chat(context *gin.Context)
-	EndChat(context *gin.Context)
+	Chat(ctx *gin.Context)
+	EndChat(ctx *gin.Context)
 }
 
 type chatController struct {
 	service service.Service
 }
 
-func NewChatController(chatService service.Service) ChatController {
-	return chatController{service: chatService}
+func NewChatController(service service.Service) ChatController {
+	return &chatController{service: service}
 }
 
-func (c chatController) Chat(ctx *gin.Context) {
+func (c *chatController) Chat(ctx *gin.Context) {
 	var request model.Request
 	err := ctx.Bind(&request)
 	if err != nil {
@@ -32,11 +33,11 @@ func (c chatController) Chat(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	outDto := c.service.Chat(ctx, request)
-	ctx.Set("ResponseData", outDto)
+	response := c.service.Chat(ctx, request)
+	ctx.Set("ResponseData", response)
 }
 
-func (c chatController) EndChat(ctx *gin.Context) {
+func (c *chatController) EndChat(ctx *gin.Context) {
 	var request model.Request
 	err := ctx.Bind(&request)
 	if err != nil {
@@ -48,6 +49,6 @@ func (c chatController) EndChat(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	outDto := c.service.EndChat(ctx, request)
-	ctx.Set("ResponseData", outDto)
+	response := c.service.EndChat(ctx, request)
+	ctx.Set("ResponseData", response)
 }

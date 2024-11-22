@@ -14,7 +14,7 @@ import (
 )
 
 type Service interface {
-	Login(ctx *gin.Context, inDto model.UserInfo) *model.UserInfo
+	Login(ctx *gin.Context, request model.UserInfo) *model.UserInfo
 	Check(loginToken uuid.UUID) (*model.UserInfo, error)
 }
 
@@ -31,7 +31,7 @@ func NewService(db *sql.DB) Service {
 	return service
 }
 
-func (service *authService) Login(ctx *gin.Context, inDto model.UserInfo) *model.UserInfo {
+func (service *authService) Login(ctx *gin.Context, request model.UserInfo) *model.UserInfo {
 	var (
 		permission  string
 		currentTime = time.Now()
@@ -41,7 +41,7 @@ func (service *authService) Login(ctx *gin.Context, inDto model.UserInfo) *model
 		err         error
 	)
 	// 验证账号密码
-	userInfo, err = service.authDao.GetUserInfoByUserName(inDto.Username)
+	userInfo, err = service.authDao.GetUserInfoByUserName(request.Username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = &myerrors.CustomError{
@@ -53,7 +53,7 @@ func (service *authService) Login(ctx *gin.Context, inDto model.UserInfo) *model
 		_ = ctx.Error(err)
 		return nil
 	}
-	if userInfo.Password != inDto.Password {
+	if userInfo.Password != request.Password {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
 			MessageCode: "EAU0000",
@@ -65,7 +65,7 @@ func (service *authService) Login(ctx *gin.Context, inDto model.UserInfo) *model
 
 	// 更新登录凭证
 	loginStatus = &model.LoginStatus{
-		UserName:      inDto.Username,
+		UserName:      request.Username,
 		LastLoginTime: currentTime,
 		LoginToken:    loginToken,
 	}

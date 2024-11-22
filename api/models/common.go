@@ -21,13 +21,13 @@ const (
 var (
 	ResponseCommonSuccess = ResponseCommon{
 		Status:      ResponseCommonStatusSuccess,
-		MessageCode: "N0000",
+		MessageCode: "N000000",
 		MessageText: "",
 	}
 
 	ResponseCommonSystemError = ResponseCommon{
 		Status:      ResponseCommonStatusSystemError,
-		MessageCode: "E9999",
+		MessageCode: "E999999",
 		MessageText: "System Error",
 	}
 )

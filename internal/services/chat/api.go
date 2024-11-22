@@ -3,8 +3,9 @@ package chat
 import (
 	"LaoQGChat/api/models/chat"
 	"LaoQGChat/internal/myerrors"
-	"github.com/gin-gonic/gin"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 type externalAPI interface {
@@ -31,7 +32,7 @@ func getExternalAPI(model string) (externalAPI, error) {
 	}
 	err = &myerrors.CustomError{
 		StatusCode:  200,
-		MessageCode: "ECH50",
+		MessageCode: "ECH0050",
 		MessageText: "不受支持的模型名称。",
 	}
 	return nil, err

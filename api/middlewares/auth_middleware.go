@@ -3,9 +3,10 @@ package middlewares
 import (
 	"LaoQGChat/api/models/auth"
 	"LaoQGChat/internal/myerrors"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"net/http"
 )
 
 func AuthHandler(checkFunc func(loginToken uuid.UUID) (*auth.UserInfo, error)) gin.HandlerFunc {
@@ -24,7 +25,7 @@ func AuthHandler(checkFunc func(loginToken uuid.UUID) (*auth.UserInfo, error)) g
 			if err != nil {
 				err = &myerrors.CustomError{
 					StatusCode:  200,
-					MessageCode: "EAU01",
+					MessageCode: "EAU0001",
 					MessageText: "用户未登录。",
 				}
 				_ = ctx.AbortWithError(http.StatusNonAuthoritativeInfo, err)
@@ -36,7 +37,7 @@ func AuthHandler(checkFunc func(loginToken uuid.UUID) (*auth.UserInfo, error)) g
 			if err != nil {
 				err = &myerrors.CustomError{
 					StatusCode:  200,
-					MessageCode: "EAU01",
+					MessageCode: "EAU0001",
 					MessageText: "用户未登录。",
 				}
 				_ = ctx.AbortWithError(http.StatusNonAuthoritativeInfo, err)

@@ -5,8 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/gin-gonic/gin"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TransactionHandler(db *sql.DB) gin.HandlerFunc {
@@ -21,7 +22,7 @@ func TransactionHandler(db *sql.DB) gin.HandlerFunc {
 		if err != nil {
 			err := &myerrors.CustomError{
 				StatusCode:  300,
-				MessageCode: "EDB01",
+				MessageCode: "EDB0001",
 				MessageText: "数据库连接失败，请联系管理员。",
 			}
 			_ = ctx.Error(err)

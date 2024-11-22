@@ -17,7 +17,7 @@ func VersionHandler(version string) gin.HandlerFunc {
 		if len(versionInList) < 2 {
 			err := &myerrors.CustomError{
 				StatusCode:  300,
-				MessageCode: "EVE01",
+				MessageCode: "EVE0001",
 				MessageText: "版本号格式错误。",
 			}
 			_ = ctx.AbortWithError(http.StatusUpgradeRequired, err)
@@ -27,7 +27,7 @@ func VersionHandler(version string) gin.HandlerFunc {
 		if versionInList[0] != versionList[0] || versionInList[1] != versionList[1] {
 			err := &myerrors.CustomError{
 				StatusCode:  300,
-				MessageCode: "EVE02",
+				MessageCode: "EVE0002",
 				MessageText: "版本过低，请获取最新的app。",
 			}
 			_ = ctx.AbortWithError(http.StatusUpgradeRequired, err)

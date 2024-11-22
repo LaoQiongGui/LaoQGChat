@@ -17,14 +17,12 @@ type authController struct {
 }
 
 func NewAuthController(service service.Service) AuthController {
-	controller := new(authController)
-	controller.service = service
-	return controller
+	return &authController{service: service}
 }
 
 func (c *authController) Login(ctx *gin.Context) {
-	inDto := model.UserInfo{}
-	err := ctx.Bind(&inDto)
+	var request model.UserInfo
+	err := ctx.Bind(&request)
 	if err != nil {
 		err = &myerrors.CustomError{
 			StatusCode:  200,
@@ -34,6 +32,6 @@ func (c *authController) Login(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	outDto := c.service.Login(ctx, inDto)
-	ctx.Set("ResponseData", outDto)
+	response := c.service.Login(ctx, request)
+	ctx.Set("ResponseData", response)
 }
